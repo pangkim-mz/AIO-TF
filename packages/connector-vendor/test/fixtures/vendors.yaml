@@ -1,0 +1,26 @@
+vendors:
+  - name: Acme Payments
+    domain: acme.com
+    serviceCategory: payment
+    criticality: HIGH
+    requiredCertifications: [SOC2]
+    certifications:
+      - type: SOC2
+        expiresAt: 2026-03-01   # 만료됨
+      - type: ISO27001
+        expiresAt: 2027-01-01   # 유효
+
+  - name: CloudCorp
+    domain: cloudcorp.io
+    serviceCategory: infra
+    criticality: MEDIUM
+    certifications:
+      - type: SOC2
+        expiresAt: 2026-06-20   # 임박 (기준일 2026-06-02 기준 18일)
+
+  - name: TinyTool
+    domain: tinytool.dev
+    serviceCategory: SaaS
+    criticality: LOW
+    requiredCertifications: [SOC2]
+    certifications: []          # 인증서 없음 → 필수 누락

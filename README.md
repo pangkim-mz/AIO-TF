@@ -11,6 +11,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 |---|---|
 | `packages/schema` | 공통 정규화 스키마 (Asset / Finding / RiskScore, zod) |
 | `packages/connector-npm` | package.json 스캐너 → 자산 추출 (lockfile로 정확한 버전 해석) |
+| `packages/connector-vendor` | 벤더 인벤토리(YAML/JSON) → 자산 + 규칙 기반 컴플라이언스 평가 |
 | `packages/enrich-osv` | OSV.dev API로 CVE 매칭 (타임아웃·재시도·동시성 제한) |
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
@@ -34,6 +35,10 @@ pnpm scan <path/to/package.json> --json
 
 # Postgres에 영속화 (마이그레이션 자동 적용)
 $env:DATABASE_URL = "postgres://user:pass@localhost:5432/omniguard"; pnpm scan <path/to/package.json>
+
+# 벤더/서드파티 스캔 (인증서 만료/누락 등 컴플라이언스 규칙)
+pnpm scan:vendor <path/to/vendors.yaml>
+pnpm scan:vendor <path/to/vendors.yaml> --json
 ```
 
 ## 영속화 (멀티테넌트)
@@ -53,6 +58,7 @@ $env:DATABASE_URL = "postgres://user:pass@localhost:5432/omniguard"; pnpm scan <
 ## 설계 원칙
 
 - 정규화 스키마 하나로 세 도메인(SW 공급망/벤더/클라우드)을 흡수 → 파이프라인은 도메인 무관.
+  벤더 도메인은 schema/scoring/storage **변경 없이** 추가됨(입력 파싱 + 규칙만 신규) — 스키마 범용성 검증 완료.
 - 점수는 **결정론적**이고 `scoringVersion`으로 버전 관리(재현성). AI는 점수 *해석*만 담당.
 - 외부 입력(OSV 응답, package.json)은 zod로 런타임 검증.
 
