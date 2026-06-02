@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 94 passed / 2 skipped(Postgres 계약 2건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 103 passed / 3 skipped(Postgres 계약 3건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -43,6 +43,12 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - `packages/enrich-osv` — OSV.dev 보강(타임아웃·재시도·동시성 제한). 테스트는 Enricher 주입으로 네트워크 분리.
 - `apps/{cli,api,web}` — 오케스트레이션/노출 계층. 비즈니스 로직 두지 말 것.
 
+스캔 비동기화: API는 `POST /v1/scans/*`에서 검증 후 작업을 큐에 넣고(202+jobId), 인프로세스
+워커(`apps/api/src/worker.ts`)가 클레임해 처리한다. 스캔 실행 로직은 `apps/api/src/scans.ts`
+(`runScanJob` 디스패처)에 모으고 server/worker가 공유한다. 큐는 `packages/storage`의 `JobQueue`
+포트(InMemory·Postgres). Postgres는 `FOR UPDATE SKIP LOCKED`로 클레임, `job` 테이블은 워커가
+전 테넌트를 처리하므로 **RLS 비대상**(getJob만 코드레벨 tenant 필터). FIFO 보장은 `seq`(bigserial).
+
 도메인 간 통합: `service` 자산이 `depends_on`(→패키지)·`hosted_on`(→클라우드)·`provided_by`(→벤더)
 엣지로 세 도메인을 가로지른다. `buildTopology`가 기존 자산을 자연키로 조회해 연결 →
 서비스 영향도가 모든 도메인 리스크의 통합 최악값이 된다(OmniGuard 최종 목적).
@@ -66,6 +72,8 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - RBAC: 읽기=인증된 전 역할, 쓰기(스캔)=`admin`/`analyst`.
 - 응답 포맷 고정(`apps/api/src/envelope.ts`): 성공 `{ok:true,data}` / 실패 `{ok:false,error:{code,message}}`.
   code=디버깅용, message=사용자용. 내부 오류 상세는 비노출.
+- 스캔은 비동기: `POST /v1/scans/*` → 202 `{jobId,status}`, `GET /v1/jobs/:id`로 폴링. web `ApiClient`는
+  완료까지 서버측 폴링해 기존 동기형 UI 유지(`apps/web/lib/api.ts`).
 
 ## 환경 주의사항 (Windows)
 
@@ -87,13 +95,14 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 ## 다음 단계 (로드맵 [예정])
 
-1. **스캔 비동기화(큐)** — 현재 OSV/스캔이 동기. POST가 jobId 반환 + 상태 폴링/조회 엔드포인트. 코어 아키텍처 변경 수반.
-2. **인증 고도화 잔여** — DB 토큰·OIDC 완료. 남은 것: 토큰 발급/폐기 API(엔드포인트, `TokenStore.deleteToken` 이미 존재).
+1. **인증 잔여** — DB 토큰·OIDC 완료. 남은 것: 토큰 발급/폐기 API(엔드포인트, `TokenStore.deleteToken` 이미 존재).
+2. **큐 고도화** — 자체 인프로세스 워커 완료. 남은 것(선택): 재시도/백오프, 데드레터, 별도 워커 프로세스, 외부 큐.
 
 완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
 대시보드 서비스 뷰(`/services` + `lib/services.ts`),
 **인증 DB 토큰화**(`TokenStore` 포트 + `DbAuthProvider`, sha256 해시, `002_api_token.sql`),
-**OIDC 하이브리드**(`OidcAuthProvider` + `CompositeAuthProvider`, jose, `OMNIGUARD_OIDC`).
+**OIDC 하이브리드**(`OidcAuthProvider` + `CompositeAuthProvider`, jose, `OMNIGUARD_OIDC`),
+**스캔 비동기화**(`JobQueue` 포트 + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id`).
 
 ### 알려진 한계
 

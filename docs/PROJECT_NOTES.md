@@ -87,6 +87,21 @@
   필요 없다. IdP는 미지정 — issuer/audience/jwksUri와 claim 이름을 `OMNIGUARD_OIDC`(env)로 받아 IdP 무관.
   인터페이스가 토큰 문자열만 받으므로 opaque/JWT 두 방식이 한 진입점에 자연히 공존(D8의 설계 이점 재확인).
 
+### D9. 스캔은 비동기 — 자체 큐 포트 + 인프로세스 워커
+- **결정**: `POST /v1/scans/*`는 입력을 검증한 뒤 작업을 큐에 넣고 `202 {jobId}`만 반환한다.
+  `packages/storage`에 `JobQueue` 포트(InMemory·Postgres)를 두고, API 프로세스 안의 워커
+  (`ScanWorker`)가 작업을 클레임해 OSV 보강까지 처리한다. 클라이언트는 `GET /v1/jobs/:id`로 폴링한다.
+- **근거**: OSV 호출이 동기라 대용량·장시간 스캔이 요청을 막았다. 큐로 분리하면 요청은 즉시 반환되고
+  처리량/지연을 워커가 흡수한다. 외부 큐(pg-boss/Redis) 대신 **자체 포트**를 택한 건 의존성 0 + 기존
+  `Repository`/`TokenStore` 패턴과의 일관성, 이미 있는 Postgres 재사용 때문이다.
+- **격리/정합성**: 워커는 전 테넌트의 작업을 가로질러 처리하므로 `job` 테이블은 **RLS 비대상**
+  (control-plane). 테넌트 격리는 `getJob`의 코드 레벨 `tenant_id` 필터로 강제한다. 클레임은
+  Postgres `FOR UPDATE SKIP LOCKED`(다중 워커 안전), FIFO는 `seq`(bigserial)로 보장
+  (ULID는 동일 ms 내 단조증가가 보장되지 않음 — 계약 테스트로 드러난 함정).
+- **코어/노출 영향**: `schema`/`scoring`/`graph` 0줄. 스캔 실행 로직은 `apps/api/src/scans.ts`
+  (`runScanJob`)로 모아 server/worker가 공유. 대시보드는 `ApiClient`가 완료까지 서버측 폴링해
+  기존 동기형 UI(액션·폼)를 **무수정**으로 유지(D6의 "모델/계층이 좋으면 UI가 공짜" 재확인).
+
 ---
 
 ## 3. 시스템 구조
@@ -95,6 +110,12 @@
 입력(커넥터) → 정규화(schema) → 보강(enrich-osv) → 점수(scoring) → 전파(graph) → 영속(storage)
                                                                             │
                                               CLI / HTTP API(Fastify) / 웹(Next.js) 가 노출
+
+비동기 스캔:  API POST → JobQueue(enqueue, 202+jobId)
+                              │
+              ScanWorker(claim → runScanJob[위 파이프라인] → complete/fail) ── 인프로세스
+                              │
+              클라이언트 GET /v1/jobs/:id 로 상태/결과 폴링
 ```
 
 | 레이어 | 패키지 | 비고 |
@@ -104,8 +125,9 @@
 | 보강 | `enrich-osv` | OSV.dev, 타임아웃·재시도·동시성 제한, 테스트는 주입으로 네트워크 분리 |
 | 점수 | `scoring` | 결정론적, `scoringVersion` |
 | 전파 | `graph` | 순환 안전, `impact=max(own,자식)` |
-| 영속 | `storage` | 포트/어댑터(InMemory·Postgres+RLS), 계약 테스트 |
-| 노출 | `apps/cli` `apps/api` `apps/web` | 비즈니스 로직 두지 않음 |
+| 영속 | `storage` | 포트/어댑터(InMemory·Postgres). `Repository`(RLS), `TokenStore`/`JobQueue`(control-plane), 계약 테스트 |
+| 큐/워커 | `storage`(`JobQueue`) + `apps/api`(`ScanWorker`·`scans.ts`) | 스캔 비동기 처리(D9). 실행 로직은 `runScanJob` 공유 |
+| 노출 | `apps/cli` `apps/api` `apps/web` | 비즈니스 로직 두지 않음. 스캔은 enqueue→폴링 |
 
 데이터 흐름의 핵심은 **모든 도메인이 같은 강을 흐른다**는 점이다(D1). 새 도메인은 강에 지류를
 추가할 뿐, 강 자체(점수·그래프·저장)는 바꾸지 않는다.
@@ -117,7 +139,7 @@
 - **새 도메인 추가**: 커넥터에 입력 파싱 + 규칙만 작성. 코어(`schema`/`scoring`/`graph`/`storage`)는
   변경하지 않는다. 이 불변식을 깨야 한다면 PR/커밋에 이유를 명시.
 - **테스트**: 기능과 함께 작성. 순수 로직은 프레임워크 무관 함수로 빼서 단위 테스트(예: `lib/format`, `lib/services`).
-  현재 **94 passed / 2 skipped**(Postgres 계약 2건은 `DATABASE_URL` 있을 때만).
+  현재 **103 passed / 3 skipped**(Postgres 계약 3건은 `DATABASE_URL` 있을 때만).
 - **커밋**: Conventional Commits, 한 커밋 한 변경, 커밋 전 `pnpm typecheck && pnpm test` 통과.
 - **CI**(`.github/workflows/ci.yml`): push/PR(main)에서 build-test(typecheck·test·web:build) +
   postgres(실제 DB로 계약 테스트). **단, git remote 미연결 → GitHub 연결 후 첫 push에 실행됨.**
@@ -144,6 +166,7 @@
 16. `f20e1dd` pnpm 11 `allowBuilds.esbuild: false` — `strictDepBuilds`로 인한 `ERR_PNPM_IGNORED_BUILDS` 해소. **CI 첫 통과.**
 17. 인증 DB 토큰화 — `TokenStore` 포트(InMemory·Postgres) + `DbAuthProvider`(sha256 해시 조회) — D8.
 18. OIDC 하이브리드 — `OidcAuthProvider`(jose, JWKS 검증) + `CompositeAuthProvider`(OIDC→토큰 폴백) — D8 확장.
+19. 스캔 비동기화 — `JobQueue` 포트(InMemory·Postgres) + `ScanWorker`(인프로세스), `POST→202+jobId`/`GET /v1/jobs/:id` — D9.
 
 ---
 
@@ -157,8 +180,8 @@
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
-pnpm typecheck && pnpm test     # 94 passed / 2 skipped 기대
-git log --oneline -3            # HEAD가 f20e1dd 인지
+pnpm typecheck && pnpm test     # 103 passed / 3 skipped 기대
+git log --oneline -5            # 인증·큐 작업 커밋 확인
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
 
@@ -172,12 +195,13 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 
 | 작업 | 왜/착수 지점 | 난이도 |
 |---|---|---|
-| **스캔 비동기화(큐)** | OSV 호출이 동기라 대용량·장시간 스캔에 약함. `POST /v1/scans/*`가 `jobId`를 반환하고 상태 폴링/조회 엔드포인트 추가. 코어(서비스 계층)에 잡 상태 모델 필요 → `schema`에 영향 가능성 검토부터. | 높음 |
 | **토큰 발급/폐기 API** | DB 토큰·OIDC 완료(D8). 남은 것: 토큰 발급/폐기 엔드포인트(admin 전용, 발급 시 원문 1회 노출 후 해시만 저장 — `TokenStore.upsertToken/deleteToken` 이미 존재). | 중간 |
+| **큐 고도화(선택)** | 자체 인프로세스 워커 완료(D9). 남은 것: 재시도/백오프, 데드레터, 별도 워커 프로세스 분리(`apps/worker`), 또는 외부 큐. 착수 지점: `ScanWorker`/`JobQueue` 포트. | 중간 |
+| ~~스캔 비동기화(큐)~~ | **완료**. `JobQueue` 포트(InMemory·Postgres) + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id` — D9. | — |
 | ~~인증 DB 토큰화 + OIDC~~ | **완료**. `TokenStore`+`DbAuthProvider`(sha256, `002_api_token.sql`), `OidcAuthProvider`+`CompositeAuthProvider`(jose, `OMNIGUARD_OIDC`). | — |
 | ~~GitHub 연결 + CI 가동~~ | **완료**(2026-06-02). remote `pangkim-mz/AIO-TF` 연결, push 트리거로 CI 가동. Node 22·pnpm 11 호환 수정 후 첫 통과(`f20e1dd`). | — |
 
-**권장 순서**: ~~GitHub 연결~~(완료) → ~~인증 DB 토큰화·OIDC~~(완료) → 큐(가장 큰 구조 변경) 또는 토큰 발급 API.
+**권장 순서**: ~~GitHub 연결~~ → ~~인증 DB·OIDC~~ → ~~큐~~(완료) → 토큰 발급 API → 큐 고도화(선택).
 
 **4) 작업 규칙**: §4를 따른다. 새 도메인/기능이라면 코어 0줄 원칙을 먼저 점검하고,
 순수 로직은 `lib`/패키지로 분리해 단위 테스트. 끝나면 README·CLAUDE.md·이 문서·메모리를 갱신.
@@ -188,5 +212,5 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 
 - `yarn.lock` 미지원(npm/pnpm lockfile만). 없으면 의존성 레인지 근사치로 폴백.
 - OSV의 CVSS 숫자 점수 파싱 미구현(현재 GHSA 텍스트 심각도만 매핑).
-- 스캔/보강이 동기(큐 없음) — 대용량·장시간 입력에 부적합.
-- 토큰 발급/폐기 API와 OIDC 미도입(현재 DB 토큰은 시작 시 `OMNIGUARD_TOKENS` 시딩으로 주입).
+- 작업 큐는 자체 구현(인프로세스 워커). 재시도/백오프·데드레터·별도 워커 프로세스 미구현.
+- 토큰 발급/폐기 API 미도입(현재 DB 토큰은 시작 시 `OMNIGUARD_TOKENS` 시딩으로 주입).

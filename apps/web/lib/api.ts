@@ -59,18 +59,44 @@ export interface ApiClientOptions {
   baseUrl: string;
   token: string;
   fetchImpl?: typeof fetch;
+  /** 작업 완료 폴링 간격(ms). 기본 500. */
+  pollIntervalMs?: number;
+  /** 작업 완료 폴링 최대 횟수. 기본 120(≈60초). */
+  pollMaxAttempts?: number;
 }
+
+/** POST /v1/scans/* 의 즉시 응답(작업 접수). */
+interface JobAccepted {
+  jobId: string;
+  status: string;
+}
+
+/** GET /v1/jobs/:id 의 작업 상태. */
+interface JobView<T> {
+  id: string;
+  type: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  result: T | null;
+  error: string | null;
+}
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
 
 /** OmniGuard API 클라이언트 (프레임워크 무관, 테스트 가능). */
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly token: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly pollIntervalMs: number;
+  private readonly pollMaxAttempts: number;
 
   constructor(options: ApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
     this.token = options.token;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.pollIntervalMs = options.pollIntervalMs ?? 500;
+    this.pollMaxAttempts = options.pollMaxAttempts ?? 120;
   }
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -105,27 +131,42 @@ export class ApiClient {
     return this.request<ImpactRow[]>("/v1/impact");
   }
   scanNpm(input: NpmScanInput): Promise<ScanSummary> {
-    return this.request<ScanSummary>("/v1/scans/npm", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
+    return this.submitScan<ScanSummary>("/v1/scans/npm", input);
   }
   scanVendor(inventory: string): Promise<ScanSummary> {
-    return this.request<ScanSummary>("/v1/scans/vendor", {
-      method: "POST",
-      body: JSON.stringify({ inventory }),
-    });
+    return this.submitScan<ScanSummary>("/v1/scans/vendor", { inventory });
   }
   scanIac(input: IacScanInput): Promise<ScanSummary> {
-    return this.request<ScanSummary>("/v1/scans/iac", {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
+    return this.submitScan<ScanSummary>("/v1/scans/iac", input);
   }
   scanService(manifest: string): Promise<ServiceSummary> {
-    return this.request<ServiceSummary>("/v1/scans/service", {
+    return this.submitScan<ServiceSummary>("/v1/scans/service", { manifest });
+  }
+
+  /** 스캔을 큐에 넣고(202) 완료될 때까지 폴링해 결과를 반환한다. */
+  private async submitScan<T>(path: string, body: unknown): Promise<T> {
+    const { jobId } = await this.request<JobAccepted>(path, {
       method: "POST",
-      body: JSON.stringify({ manifest }),
+      body: JSON.stringify(body),
     });
+    return this.awaitJob<T>(jobId);
+  }
+
+  /** 작업이 끝날 때까지 상태를 폴링한다. 성공이면 결과, 실패면 ApiClientError. */
+  private async awaitJob<T>(jobId: string): Promise<T> {
+    for (let attempt = 0; attempt < this.pollMaxAttempts; attempt++) {
+      const job = await this.request<JobView<T>>(`/v1/jobs/${jobId}`);
+      if (job.status === "succeeded") {
+        if (job.result === null) {
+          throw new ApiClientError("scan_invalid", "작업 결과가 비어 있습니다.", 502);
+        }
+        return job.result;
+      }
+      if (job.status === "failed") {
+        throw new ApiClientError("scan_failed", job.error ?? "스캔에 실패했습니다.", 502);
+      }
+      await sleep(this.pollIntervalMs);
+    }
+    throw new ApiClientError("scan_timeout", "스캔이 시간 내에 끝나지 않았습니다.", 504);
   }
 }

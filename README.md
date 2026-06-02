@@ -107,13 +107,17 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 | GET | `/health` | 공개 | 헬스 체크 |
 | GET | `/v1/assets` `/findings` `/scores` `/relationships` | 인증 | 테넌트 데이터 조회 |
 | GET | `/v1/impact` | 인증 | 그래프 영향도 전파 결과 |
-| POST | `/v1/scans/vendor` | admin/analyst | 인벤토리 텍스트 스캔·영속화 |
-| POST | `/v1/scans/npm` | admin/analyst | package.json(+lockfile) 본문 스캔·OSV 보강·영속화 |
-| POST | `/v1/scans/iac` | admin/analyst | Terraform plan JSON 본문 스캔·미설정 평가·영속화 |
-| POST | `/v1/scans/service` | admin/analyst | 서비스 매니페스트 → 기존 자산에 도메인 간 엣지 연결 |
+| POST | `/v1/scans/vendor` | admin/analyst | 인벤토리 텍스트 스캔(비동기 접수) |
+| POST | `/v1/scans/npm` | admin/analyst | package.json(+lockfile) 스캔·OSV 보강(비동기 접수) |
+| POST | `/v1/scans/iac` | admin/analyst | Terraform plan JSON 스캔·미설정 평가(비동기 접수) |
+| POST | `/v1/scans/service` | admin/analyst | 서비스 매니페스트 → 도메인 간 엣지 연결(비동기 접수) |
+| GET | `/v1/jobs/:id` | 인증 | 스캔 작업 상태/결과 폴링(테넌트 범위) |
 
-`/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`.
-lockfile 제공 시 정확한 버전, 없으면 레인지 근사치. (OSV 호출은 현재 동기 — 운영에서는 큐/비동기 권장.)
+**스캔은 비동기**다. `POST /v1/scans/*`는 본문을 검증한 뒤 작업을 큐에 넣고 `202`로
+`{ jobId, status: "queued" }`를 즉시 반환한다. 인프로세스 워커가 OSV 보강까지 처리하며,
+클라이언트는 `GET /v1/jobs/:id`로 상태(`queued`/`running`/`succeeded`/`failed`)와 결과를 폴링한다.
+`/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`
+(lockfile 제공 시 정확한 버전, 없으면 레인지 근사치).
 
 ## 대시보드 (`apps/web`)
 
@@ -127,6 +131,7 @@ pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으
 
 - 페이지: 대시보드(요약+상위 발견/영향도), **서비스(교차 도메인 통합 리스크)**, 자산,
   발견(심각도순), 영향도(전파/근원), 스캔(서버 액션으로 화면에서 직접 npm/벤더 스캔 실행 → 성공 시 조회 페이지 재검증).
+  스캔은 API에서 비동기지만, `ApiClient`가 작업 완료까지 서버측에서 폴링해 기존 동기형 UI를 그대로 유지한다.
 - 서비스 뷰는 별도 API 없이 조회 3종(assets·relationships·impact)을 클라이언트에서 조합한다
   (`lib/services.ts`, 순수 함수 + 단위 테스트). 서비스마다 통합 영향도·리스크 근원과
   도메인별(소프트웨어/클라우드/벤더) 의존 자산을 영향도순으로 보여준다.
@@ -154,3 +159,4 @@ pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으
 
 - `yarn.lock`은 미지원(현재 npm/pnpm lockfile만). 없으면 레인지 폴백.
 - OSV의 CVSS 숫자 점수 파싱 미구현(현재 GHSA 텍스트 심각도만 매핑).
+- 작업 큐는 자체 구현(인프로세스 워커 + 자체 클레임). 재시도/스케줄/데드레터 등 고급 기능은 미구현.

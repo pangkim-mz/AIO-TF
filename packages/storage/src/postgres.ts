@@ -3,9 +3,17 @@ import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import pg from "pg";
 import type { Pool, PoolClient } from "pg";
-import { Asset, AssetRelationship, Finding, RiskScore } from "@omniguard/schema";
+import {
+  Asset,
+  AssetRelationship,
+  Finding,
+  RiskScore,
+  newId,
+  now,
+} from "@omniguard/schema";
 import { type Repository, assetIdentifier } from "./port";
 import type { StoredToken, TokenStore } from "./token";
+import type { EnqueueJob, Job, JobQueue, JobStatus, JobType } from "./job";
 
 export type PostgresOptions =
   | { connectionString: string }
@@ -264,6 +272,119 @@ export class PostgresTokenStore implements TokenStore {
       [tokenHash],
     );
     return (rowCount ?? 0) > 0;
+  }
+
+  async close(): Promise<void> {
+    await this.pool.end();
+  }
+}
+
+interface JobRow {
+  id: string;
+  tenant_id: string;
+  type: string;
+  status: string;
+  payload: unknown;
+  result: unknown;
+  error: string | null;
+  attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+function rowToJob(row: JobRow): Job {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    type: row.type as JobType,
+    status: row.status as JobStatus,
+    payload: row.payload,
+    result: row.result ?? null,
+    error: row.error,
+    attempts: row.attempts,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const JOB_COLUMNS =
+  "id, tenant_id, type, status, payload, result, error, attempts, created_at, updated_at";
+
+/**
+ * PostgreSQL 비동기 스캔 작업 큐. control-plane이라 테넌트 세션 변수 없이 질의한다.
+ * claimNext는 FOR UPDATE SKIP LOCKED로 다중 워커에서도 중복 없이 클레임한다.
+ */
+export class PostgresJobQueue implements JobQueue {
+  private readonly pool: Pool;
+
+  constructor(options: PostgresOptions) {
+    this.pool =
+      "pool" in options
+        ? options.pool
+        : new pg.Pool({ connectionString: options.connectionString });
+  }
+
+  async enqueue(input: EnqueueJob): Promise<Job> {
+    const ts = now();
+    const { rows } = await this.pool.query<JobRow>(
+      `insert into job (id, tenant_id, type, status, payload, attempts, created_at, updated_at)
+       values ($1, $2, $3, 'queued', $4::jsonb, 0, $5, $5)
+       returning ${JOB_COLUMNS}`,
+      [newId(), input.tenantId, input.type, JSON.stringify(input.payload), ts],
+    );
+    return rowToJob(rows[0]!);
+  }
+
+  async getJob(tenantId: string, jobId: string): Promise<Job | null> {
+    const { rows } = await this.pool.query<JobRow>(
+      `select ${JOB_COLUMNS} from job where id = $1 and tenant_id = $2`,
+      [jobId, tenantId],
+    );
+    return rows[0] ? rowToJob(rows[0]) : null;
+  }
+
+  async claimNext(): Promise<Job | null> {
+    const { rows } = await this.pool.query<JobRow>(
+      `update job set status = 'running', attempts = attempts + 1, updated_at = $1
+       where id = (
+         select id from job where status = 'queued'
+         order by seq
+         for update skip locked
+         limit 1
+       )
+       returning ${JOB_COLUMNS}`,
+      [now()],
+    );
+    return rows[0] ? rowToJob(rows[0]) : null;
+  }
+
+  async complete(jobId: string, result: unknown): Promise<Job> {
+    return this.finish(jobId, "succeeded", { result, error: null });
+  }
+
+  async fail(jobId: string, error: string): Promise<Job> {
+    return this.finish(jobId, "failed", { result: null, error });
+  }
+
+  private async finish(
+    jobId: string,
+    status: JobStatus,
+    patch: { result: unknown; error: string | null },
+  ): Promise<Job> {
+    const { rows } = await this.pool.query<JobRow>(
+      `update job set status = $2, result = $3::jsonb, error = $4, updated_at = $5
+       where id = $1
+       returning ${JOB_COLUMNS}`,
+      [
+        jobId,
+        status,
+        patch.result === null ? null : JSON.stringify(patch.result),
+        patch.error,
+        now(),
+      ],
+    );
+    if (!rows[0]) throw new Error(`알 수 없는 작업: ${jobId}`);
+    return rowToJob(rows[0]);
   }
 
   async close(): Promise<void> {

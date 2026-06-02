@@ -1,13 +1,18 @@
 import { newId } from "@omniguard/schema";
 import {
+  InMemoryJobQueue,
   InMemoryRepository,
+  PostgresJobQueue,
   PostgresRepository,
   PostgresTokenStore,
   hashToken,
+  type JobQueue,
   type Repository,
   type TokenStore,
 } from "@omniguard/storage";
+import { enrichWithOsv } from "@omniguard/enrich-osv";
 import { buildServer } from "./server";
+import { ScanWorker } from "./worker";
 import {
   CompositeAuthProvider,
   DbAuthProvider,
@@ -75,19 +80,22 @@ function loadOidc(): OidcConfig | null {
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
   let repo: Repository;
+  let queue: JobQueue;
   let tokenAuth: AuthProvider;
 
   if (url) {
-    // 운영 경로: Postgres에 영속화하고 토큰도 DB에서 해석한다.
+    // 운영 경로: Postgres에 영속화하고 토큰·작업 큐도 DB에서 다룬다.
     const pgRepo = new PostgresRepository({ connectionString: url });
     await pgRepo.migrate();
     const tokenStore = new PostgresTokenStore({ connectionString: url });
     await seedTokens(tokenStore);
     repo = pgRepo;
+    queue = new PostgresJobQueue({ connectionString: url });
     tokenAuth = new DbAuthProvider(tokenStore);
   } else {
-    // 로컬/개발 경로: 인메모리 영속화 + 인메모리 토큰.
+    // 로컬/개발 경로: 인메모리 영속화 + 인메모리 토큰 + 인메모리 큐.
     repo = new InMemoryRepository();
+    queue = new InMemoryJobQueue();
     tokenAuth = new InMemoryAuthProvider(loadTokens());
   }
 
@@ -98,7 +106,15 @@ async function main(): Promise<void> {
     : tokenAuth;
   if (oidc) console.error(`OIDC 활성화: issuer=${oidc.issuer}`);
 
-  const app = buildServer({ repo, auth });
+  // 스캔은 비동기: API는 큐에 넣고, 인프로세스 워커가 OSV 보강까지 처리한다.
+  const worker = new ScanWorker({
+    queue,
+    repo,
+    enrich: (assets, tenantId) => enrichWithOsv(assets, tenantId),
+  });
+  worker.start();
+
+  const app = buildServer({ repo, auth, queue });
 
   await app.listen({ port: PORT, host: HOST });
   console.error(`OmniGuard API listening on http://${HOST}:${PORT}`);
