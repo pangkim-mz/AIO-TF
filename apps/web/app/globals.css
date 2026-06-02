@@ -163,3 +163,55 @@ th.num {
 .muted {
   color: var(--muted);
 }
+
+.scan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.scan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scan-form label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.scan-form textarea,
+.scan-form select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.scan-form button {
+  margin-top: 0.8rem;
+  align-self: flex-start;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.scan-form button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.notice[role="status"] {
+  border-color: var(--low);
+}
