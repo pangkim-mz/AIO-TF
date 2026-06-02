@@ -164,6 +164,24 @@ th.num {
   color: var(--muted);
 }
 
+.service {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.2rem 1.2rem;
+  margin-top: 1.2rem;
+}
+
+.service h2 {
+  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.service .cards {
+  margin-top: 0.6rem;
+}
+
 .scan-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));

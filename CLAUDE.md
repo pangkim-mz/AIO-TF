@@ -78,8 +78,9 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 1. **스캔 비동기화(큐)** — 현재 OSV/스캔이 동기. POST가 jobId 반환 + 상태 폴링/조회 엔드포인트. 코어 아키텍처 변경 수반.
 2. **인증 고도화** — env 토큰 → 토큰 DB 또는 OIDC. 범위 큼/설계 결정 많음.
-3. **CI 파이프라인** — GitHub Actions로 lint/build/test 자동화. 가장 독립적.
-4. **대시보드 서비스 뷰** — connector-service의 교차도메인 통합 리스크를 웹에서 시각화.
+
+완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결 후 push 시 실행),
+대시보드 서비스 뷰(`/services` + `lib/services.ts`).
 
 ### 알려진 한계
 

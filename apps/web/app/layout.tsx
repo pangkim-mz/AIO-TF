@@ -19,6 +19,7 @@ export default function RootLayout({
           <nav aria-label="주요 메뉴">
             <span className="brand">OmniGuard</span>
             <Link href="/">대시보드</Link>
+            <Link href="/services">서비스</Link>
             <Link href="/assets">자산</Link>
             <Link href="/findings">발견</Link>
             <Link href="/impact">영향도</Link>

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Severity } from "@omniguard/schema";
+import type { Criticality, Severity } from "@omniguard/schema";
 import { ApiClientError } from "../lib/api";
 
 export function StatCard({
@@ -19,6 +19,14 @@ export function StatCard({
 
 export function SeverityBadge({ severity }: { severity: Severity }): ReactNode {
   return <span className={`badge ${severity}`}>{severity}</span>;
+}
+
+export function CriticalityBadge({
+  criticality,
+}: {
+  criticality: Criticality;
+}): ReactNode {
+  return <span className={`badge ${criticality}`}>{criticality}</span>;
 }
 
 export function ErrorNotice({ error }: { error: unknown }): ReactNode {
