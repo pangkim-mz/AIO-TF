@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 동일 ref의 이전 실행은 취소(최신 커밋만 검증)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 로컬과 동일하게 esbuild 빌드 스크립트 검증을 끈다(esbuild는 플랫폼 바이너리로 동작)
+  npm_config_verify_deps_before_run: "false"
+
+jobs:
+  # DB 없는 기본 경로: 타입 체크 + 단위/통합 테스트(Postgres 계약은 skip) + 웹 빌드
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Web build
+        run: pnpm web:build
+
+  # Postgres 어댑터 경로: 실제 DB를 띄워 RLS/멱등/격리 계약 테스트까지 실행
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: omniguard
+          POSTGRES_PASSWORD: omniguard
+          POSTGRES_DB: omniguard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U omniguard"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://omniguard:omniguard@localhost:5432/omniguard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Test (with Postgres)
+        run: pnpm test
