@@ -1,33 +1,19 @@
-import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyReply,
+  type FastifyRequest,
+} from "fastify";
 import { z } from "zod";
-import {
-  type Asset,
-  type AssetRelationship,
-  type Finding,
-  type RiskScore,
-} from "@omniguard/schema";
-import { scoreFinding } from "@omniguard/scoring";
-import { propagateRisk } from "@omniguard/graph";
-import {
-  evaluateVendors,
-  scanVendorInventoryContent,
-} from "@omniguard/connector-vendor";
-import { scanPackageContent } from "@omniguard/connector-npm";
-import { evaluateIac, scanTerraformPlanContent } from "@omniguard/connector-iac";
-import {
-  buildTopology,
-  parseServiceManifestContent,
-} from "@omniguard/connector-service";
-import { enrichWithOsv } from "@omniguard/enrich-osv";
-import type { Repository } from "@omniguard/storage";
+import type { JobQueue, JobType, Repository } from "@omniguard/storage";
 import { ApiError, sendError, sendOk } from "./envelope";
 import { type AuthProvider, type Principal, hasRole } from "./auth";
-
-/** 자산 → 취약점 보강 함수. 기본은 OSV 호출, 테스트에서는 주입으로 대체. */
-export type Enricher = (
-  assets: readonly Asset[],
-  tenantId: string,
-) => Promise<Finding[]>;
+import {
+  ScanIacBody,
+  ScanNpmBody,
+  ScanServiceBody,
+  ScanVendorBody,
+  computeImpact,
+} from "./scans";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -38,28 +24,8 @@ declare module "fastify" {
 export interface ServerDeps {
   repo: Repository;
   auth: AuthProvider;
-  /** 취약점 보강기. 미지정 시 OSV.dev 호출. */
-  enrich?: Enricher;
+  queue: JobQueue;
 }
-
-const ScanVendorBody = z.object({
-  inventory: z.string().min(1), // YAML 또는 JSON 인벤토리 텍스트
-});
-
-const ScanNpmBody = z.object({
-  packageJson: z.string().min(1),
-  lockfile: z.string().optional(),
-  lockfileType: z.enum(["npm", "pnpm"]).optional(),
-});
-
-const ScanIacBody = z.object({
-  plan: z.string().min(1), // terraform show -json 출력
-  stackName: z.string().optional(),
-});
-
-const ScanServiceBody = z.object({
-  manifest: z.string().min(1), // 서비스 매니페스트(YAML/JSON)
-});
 
 function bearerToken(request: FastifyRequest): string | null {
   const header = request.headers.authorization;
@@ -77,8 +43,6 @@ function principalOf(request: FastifyRequest): Principal {
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
   const app = Fastify({ logger: false });
-  const enrich: Enricher = deps.enrich ?? ((assets, tenantId) =>
-    enrichWithOsv(assets, tenantId));
 
   // 일관 에러 포맷 (사용자 메시지 / 디버깅 코드 분리, 내부 오류 비노출)
   app.setErrorHandler((error, request, reply) => {
@@ -142,36 +106,38 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       sendOk(reply, await computeImpact(deps.repo, tenantId));
     });
 
+    // ── 비동기 스캔: 검증 후 큐에 넣고 jobId를 반환(202) ──
     api.post("/v1/scans/vendor", async (request, reply) => {
-      const principal = principalOf(request);
-      requireWrite(principal);
-      const { inventory } = ScanVendorBody.parse(request.body);
-      const summary = await runVendorScan(deps.repo, principal.tenantId, inventory);
-      sendOk(reply, summary, 201);
+      await enqueueScan(deps, request, reply, "vendor", ScanVendorBody.parse(request.body));
     });
 
     api.post("/v1/scans/npm", async (request, reply) => {
-      const principal = principalOf(request);
-      requireWrite(principal);
-      const input = ScanNpmBody.parse(request.body);
-      const summary = await runNpmScan(deps.repo, enrich, principal.tenantId, input);
-      sendOk(reply, summary, 201);
+      await enqueueScan(deps, request, reply, "npm", ScanNpmBody.parse(request.body));
     });
 
     api.post("/v1/scans/iac", async (request, reply) => {
-      const principal = principalOf(request);
-      requireWrite(principal);
-      const { plan, stackName } = ScanIacBody.parse(request.body);
-      const summary = await runIacScan(deps.repo, principal.tenantId, plan, stackName);
-      sendOk(reply, summary, 201);
+      await enqueueScan(deps, request, reply, "iac", ScanIacBody.parse(request.body));
     });
 
     api.post("/v1/scans/service", async (request, reply) => {
-      const principal = principalOf(request);
-      requireWrite(principal);
-      const { manifest } = ScanServiceBody.parse(request.body);
-      const summary = await runServiceScan(deps.repo, principal.tenantId, manifest);
-      sendOk(reply, summary, 201);
+      await enqueueScan(deps, request, reply, "service", ScanServiceBody.parse(request.body));
+    });
+
+    // 작업 상태 폴링(테넌트 범위)
+    api.get("/v1/jobs/:id", async (request, reply) => {
+      const { tenantId } = principalOf(request);
+      const { id } = request.params as { id: string };
+      const job = await deps.queue.getJob(tenantId, id);
+      if (!job) {
+        throw new ApiError(404, "not_found", "작업을 찾을 수 없습니다.");
+      }
+      sendOk(reply, {
+        id: job.id,
+        type: job.type,
+        status: job.status,
+        result: job.result,
+        error: job.error,
+      });
     });
   });
 
@@ -184,168 +150,16 @@ function requireWrite(principal: Principal): void {
   }
 }
 
-interface ScanSummary {
-  assetCount: number;
-  relationshipCount: number;
-  findingCount: number;
-  topScore: number;
-}
-
-/** findings를 점수화·영속화하고 최고 점수를 반환한다 (도메인 공통). */
-async function scoreAndPersist(
-  repo: Repository,
-  tenantId: string,
-  assets: readonly Asset[],
-  findings: readonly Finding[],
-): Promise<number> {
-  const assetById = new Map<string, Asset>(assets.map((a) => [a.id, a]));
-  const scores: RiskScore[] = [];
-  for (const finding of findings) {
-    const asset = assetById.get(finding.assetId);
-    if (asset) scores.push(scoreFinding(finding, asset));
-  }
-  await repo.upsertScores(tenantId, scores);
-  return scores.reduce((max, s) => Math.max(max, s.score), 0);
-}
-
-async function runVendorScan(
-  repo: Repository,
-  tenantId: string,
-  inventory: string,
-): Promise<ScanSummary> {
-  const { assets: scanned, entries } = scanVendorInventoryContent(
-    inventory,
-    tenantId,
-  );
-  const assets = await repo.upsertAssets(tenantId, scanned);
-  const evaluated = evaluateVendors(assets, entries, tenantId);
-  const findings = await repo.upsertFindings(tenantId, evaluated);
-  const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
-
-  return {
-    assetCount: assets.length,
-    relationshipCount: 0,
-    findingCount: findings.length,
-    topScore,
-  };
-}
-
-/** 자산을 저장하고, 엣지 끝점을 영속화된 멱등 id로 재매핑해 관계를 저장한다. */
-async function persistScan(
-  repo: Repository,
-  tenantId: string,
-  scanned: { assets: Asset[]; relationships: AssetRelationship[] },
-): Promise<{ assets: Asset[]; relationships: AssetRelationship[] }> {
-  const assets = await repo.upsertAssets(tenantId, scanned.assets);
-  const idMap = new Map(scanned.assets.map((a, i) => [a.id, assets[i]!.id]));
-  const remapped = scanned.relationships.map((r) => ({
-    ...r,
-    fromAssetId: idMap.get(r.fromAssetId) ?? r.fromAssetId,
-    toAssetId: idMap.get(r.toAssetId) ?? r.toAssetId,
-  }));
-  const relationships = await repo.upsertRelationships(tenantId, remapped);
-  return { assets, relationships };
-}
-
-async function runNpmScan(
-  repo: Repository,
-  enrich: Enricher,
-  tenantId: string,
-  input: { packageJson: string; lockfile?: string; lockfileType?: "npm" | "pnpm" },
-): Promise<ScanSummary> {
-  const { assets, relationships } = await persistScan(
-    repo,
-    tenantId,
-    scanPackageContent(input, tenantId),
-  );
-  const enriched = await enrich(assets, tenantId);
-  const findings = await repo.upsertFindings(tenantId, enriched);
-  const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
-
-  return {
-    assetCount: assets.length,
-    relationshipCount: relationships.length,
-    findingCount: findings.length,
-    topScore,
-  };
-}
-
-async function runIacScan(
-  repo: Repository,
-  tenantId: string,
-  plan: string,
-  stackName: string | undefined,
-): Promise<ScanSummary> {
-  const scanned = scanTerraformPlanContent(plan, tenantId, { stackName });
-  const { assets, relationships } = await persistScan(repo, tenantId, scanned);
-  const evaluated = evaluateIac(assets, scanned.resources, tenantId);
-  const findings = await repo.upsertFindings(tenantId, evaluated);
-  const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
-
-  return {
-    assetCount: assets.length,
-    relationshipCount: relationships.length,
-    findingCount: findings.length,
-    topScore,
-  };
-}
-
-interface ServiceSummary {
-  serviceCount: number;
-  edgeCount: number;
-  unresolved: string[];
-}
-
-/** 서비스 매니페스트를 기존 자산에 연결한다(도메인 간 그래프). 발견은 생성하지 않는다. */
-async function runServiceScan(
-  repo: Repository,
-  tenantId: string,
-  manifest: string,
-): Promise<ServiceSummary> {
-  const entries = parseServiceManifestContent(manifest);
-  const existing = await repo.listAssets(tenantId);
-  const topo = buildTopology(entries, existing, tenantId);
-  // persistScan: service 자산 id만 재매핑(엣지 to측은 이미 영속화된 기존 자산 id)
-  const { assets, relationships } = await persistScan(repo, tenantId, {
-    assets: topo.assets,
-    relationships: topo.relationships,
-  });
-  return {
-    serviceCount: assets.length,
-    edgeCount: relationships.length,
-    unresolved: topo.unresolved,
-  };
-}
-
-async function computeImpact(repo: Repository, tenantId: string) {
-  const [assets, findings, scores, relationships] = await Promise.all([
-    repo.listAssets(tenantId),
-    repo.listFindings(tenantId),
-    repo.listScores(tenantId),
-    repo.listRelationships(tenantId),
-  ]);
-
-  const scoreByFinding = new Map(scores.map((s) => [s.findingId, s.score]));
-  const own = new Map<string, number>();
-  for (const finding of findings) {
-    const score = scoreByFinding.get(finding.id);
-    if (score === undefined) continue;
-    const prev = own.get(finding.assetId) ?? 0;
-    if (score > prev) own.set(finding.assetId, score);
-  }
-
-  const impacts = propagateRisk(assets, relationships, own);
-  const nameById = new Map(assets.map((a) => [a.id, a.name]));
-  return [...impacts.values()]
-    .map((r) => ({
-      assetId: r.assetId,
-      asset: nameById.get(r.assetId) ?? r.assetId,
-      ownScore: r.ownScore,
-      impactScore: r.impactScore,
-      inherited: r.inherited,
-      rootCause: r.rootCauseAssetId
-        ? (nameById.get(r.rootCauseAssetId) ?? r.rootCauseAssetId)
-        : null,
-    }))
-    .sort((a, b) => b.impactScore - a.impactScore);
+/** 쓰기 권한 확인 후 검증된 payload를 큐에 넣고 202 + jobId를 응답한다. */
+async function enqueueScan(
+  deps: ServerDeps,
+  request: FastifyRequest,
+  reply: FastifyReply,
+  type: JobType,
+  payload: unknown,
+): Promise<void> {
+  const principal = principalOf(request);
+  requireWrite(principal);
+  const job = await deps.queue.enqueue({ tenantId: principal.tenantId, type, payload });
+  sendOk(reply, { jobId: job.id, status: job.status }, 202);
 }

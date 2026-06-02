@@ -14,6 +14,7 @@
     "@omniguard/scoring": "workspace:*",
     "@omniguard/storage": "workspace:*",
     "fastify": "^5.1.0",
+    "jose": "^6.2.3",
     "zod": "^3.24.1"
   }
 }

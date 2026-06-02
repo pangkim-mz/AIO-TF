@@ -50,15 +50,44 @@ describe("ApiClient", () => {
     );
   });
 
-  it("scanNpm은 POST 본문을 직렬화한다", async () => {
-    const fetchImpl = vi.fn(async () =>
-      jsonResponse({ ok: true, data: { assetCount: 2 } }),
-    ) as unknown as typeof fetch;
+  it("scanNpm은 POST로 큐에 넣고(jobId) 작업 완료까지 폴링해 결과를 반환한다", async () => {
+    // 1) POST → 202 {jobId} 2) GET /v1/jobs/j1 → succeeded + result
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return jsonResponse({ ok: true, data: { jobId: "j1", status: "queued" } }, 202);
+      }
+      return jsonResponse({
+        ok: true,
+        data: { id: "j1", type: "npm", status: "succeeded", result: { assetCount: 2 }, error: null },
+      });
+    }) as unknown as typeof fetch;
 
-    await client(fetchImpl).scanNpm({ packageJson: "{}" });
-    const [, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0];
-    expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body as string)).toEqual({ packageJson: "{}" });
+    const summary = await client(fetchImpl).scanNpm({ packageJson: "{}" });
+    expect(summary).toEqual({ assetCount: 2 });
+
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    const [postUrl, postInit] = calls[0];
+    expect(postUrl).toBe("http://api/v1/scans/npm");
+    expect(postInit.method).toBe("POST");
+    expect(JSON.parse(postInit.body as string)).toEqual({ packageJson: "{}" });
+    // 이어서 작업 상태를 폴링한다
+    expect(calls[1][0]).toBe("http://api/v1/jobs/j1");
+  });
+
+  it("작업이 failed면 scanVendor가 ApiClientError를 던진다", async () => {
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        return jsonResponse({ ok: true, data: { jobId: "j2", status: "queued" } }, 202);
+      }
+      return jsonResponse({
+        ok: true,
+        data: { id: "j2", type: "vendor", status: "failed", result: null, error: "파싱 실패" },
+      });
+    }) as unknown as typeof fetch;
+
+    await expect(client(fetchImpl).scanVendor("bad")).rejects.toMatchObject({
+      code: "scan_failed",
+      message: "파싱 실패",
+    });
   });
 });

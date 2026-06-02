@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { type Finding, newId, now } from "@omniguard/schema";
-import { InMemoryRepository } from "@omniguard/storage";
-import { buildServer, type Enricher } from "../src/server";
+import { InMemoryJobQueue, InMemoryRepository } from "@omniguard/storage";
+import { buildServer } from "../src/server";
+import { ScanWorker } from "../src/worker";
+import type { Enricher } from "../src/scans";
 import { InMemoryAuthProvider, type Principal } from "../src/auth";
 
 const ADMIN_TENANT = newId();
@@ -52,22 +54,50 @@ const stubEnrich: Enricher = async (assets, tenantId) => {
   return [finding];
 };
 
-function makeApp(enrich?: Enricher) {
-  return buildServer({
-    repo: new InMemoryRepository(),
+function makeSetup(enrich?: Enricher) {
+  const repo = new InMemoryRepository();
+  const queue = new InMemoryJobQueue();
+  const worker = new ScanWorker({ queue, repo, enrich: enrich ?? (async () => []) });
+  const app = buildServer({
+    repo,
+    queue,
     auth: new InMemoryAuthProvider(tokens),
-    enrich,
   });
+  return { repo, queue, worker, app };
 }
 
 function auth(token: string) {
   return { authorization: `Bearer ${token}` };
 }
 
-describe("OmniGuard API", () => {
-  let app: ReturnType<typeof buildServer>;
+type App = ReturnType<typeof buildServer>;
+
+/** 스캔을 큐에 넣고(202+jobId) 워커로 비우고, 완료된 작업의 결과를 돌려준다. */
+async function runScan(
+  app: App,
+  worker: ScanWorker,
+  path: string,
+  payload: unknown,
+  token = "admin-token",
+) {
+  const enqueue = await app.inject({ method: "POST", url: path, headers: auth(token), payload });
+  expect(enqueue.statusCode).toBe(202);
+  const { jobId, status } = enqueue.json().data;
+  expect(status).toBe("queued");
+
+  while (await worker.processNext()) {
+    /* 큐를 비운다 */
+  }
+
+  const job = await app.inject({ method: "GET", url: `/v1/jobs/${jobId}`, headers: auth(token) });
+  return { jobId, job: job.json().data };
+}
+
+describe("OmniGuard API (비동기 스캔)", () => {
+  let app: App;
+  let worker: ScanWorker;
   beforeEach(() => {
-    app = makeApp();
+    ({ app, worker } = makeSetup());
   });
 
   it("GET /health 는 인증 없이 200", async () => {
@@ -85,15 +115,11 @@ describe("OmniGuard API", () => {
   });
 
   it("잘못된 토큰은 401", async () => {
-    const res = await app.inject({
-      method: "GET",
-      url: "/v1/assets",
-      headers: auth("nope"),
-    });
+    const res = await app.inject({ method: "GET", url: "/v1/assets", headers: auth("nope") });
     expect(res.statusCode).toBe(401);
   });
 
-  it("viewer는 스캔(쓰기) 403", async () => {
+  it("viewer는 스캔(쓰기) 403 — 큐에 넣지 않는다", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/scans/vendor",
@@ -104,7 +130,7 @@ describe("OmniGuard API", () => {
     expect(res.json().error.code).toBe("forbidden");
   });
 
-  it("잘못된 본문은 400 validation_error", async () => {
+  it("잘못된 본문은 400 validation_error — 큐에 넣기 전에 검증", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/v1/scans/vendor",
@@ -115,17 +141,11 @@ describe("OmniGuard API", () => {
     expect(res.json().error.code).toBe("validation_error");
   });
 
-  it("admin 스캔 → 데이터가 해당 테넌트에 저장되고 조회된다", async () => {
-    const scan = await app.inject({
-      method: "POST",
-      url: "/v1/scans/vendor",
-      headers: auth("admin-token"),
-      payload: { inventory: VENDOR_YAML },
-    });
-    expect(scan.statusCode).toBe(201);
-    const summary = scan.json().data;
-    expect(summary.assetCount).toBe(1);
-    expect(summary.findingCount).toBe(1); // SOC2 누락
+  it("admin 스캔 → 작업 성공, 데이터가 해당 테넌트에 저장·조회된다", async () => {
+    const { job } = await runScan(app, worker, "/v1/scans/vendor", { inventory: VENDOR_YAML });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.assetCount).toBe(1);
+    expect(job.result.findingCount).toBe(1); // SOC2 누락
 
     const findings = await app.inject({
       method: "GET",
@@ -136,12 +156,7 @@ describe("OmniGuard API", () => {
   });
 
   it("테넌트 격리: viewer는 admin이 만든 데이터를 못 본다", async () => {
-    await app.inject({
-      method: "POST",
-      url: "/v1/scans/vendor",
-      headers: auth("admin-token"),
-      payload: { inventory: VENDOR_YAML },
-    });
+    await runScan(app, worker, "/v1/scans/vendor", { inventory: VENDOR_YAML });
     const res = await app.inject({
       method: "GET",
       url: "/v1/assets",
@@ -150,23 +165,29 @@ describe("OmniGuard API", () => {
     expect(res.json().data).toHaveLength(0);
   });
 
-  it("npm 스캔 → 루트 앱 + 의존성 + depends_on 엣지, 영향도 전파", async () => {
-    const npmApp = makeApp(stubEnrich);
-
-    const scan = await npmApp.inject({
-      method: "POST",
-      url: "/v1/scans/npm",
-      headers: auth("admin-token"),
-      payload: { packageJson: PKG_JSON },
+  it("작업 조회는 테넌트 범위 — 다른 테넌트 작업은 404", async () => {
+    const { jobId } = await runScan(app, worker, "/v1/scans/vendor", { inventory: VENDOR_YAML });
+    // admin이 만든 작업을 viewer(다른 테넌트)가 조회하면 못 본다.
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/jobs/${jobId}`,
+      headers: auth("viewer-token"),
     });
-    expect(scan.statusCode).toBe(201);
-    const summary = scan.json().data;
-    expect(summary.assetCount).toBe(2); // 루트 앱 + lodash
-    expect(summary.relationshipCount).toBe(1);
-    expect(summary.findingCount).toBe(1);
-    expect(summary.topScore).toBeGreaterThan(0);
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.code).toBe("not_found");
+  });
 
-    const rels = await npmApp.inject({
+  it("npm 스캔 → 루트 앱 + 의존성 + depends_on 엣지, 영향도 전파", async () => {
+    ({ app, worker } = makeSetup(stubEnrich));
+
+    const { job } = await runScan(app, worker, "/v1/scans/npm", { packageJson: PKG_JSON });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.assetCount).toBe(2); // 루트 앱 + lodash
+    expect(job.result.relationshipCount).toBe(1);
+    expect(job.result.findingCount).toBe(1);
+    expect(job.result.topScore).toBeGreaterThan(0);
+
+    const rels = await app.inject({
       method: "GET",
       url: "/v1/relationships",
       headers: auth("admin-token"),
@@ -174,7 +195,7 @@ describe("OmniGuard API", () => {
     expect(rels.json().data).toHaveLength(1);
 
     // 앱 자신은 취약점이 없지만 lodash로부터 영향도를 상속받는다
-    const impact = await npmApp.inject({
+    const impact = await app.inject({
       method: "GET",
       url: "/v1/impact",
       headers: auth("admin-token"),
@@ -199,17 +220,11 @@ describe("OmniGuard API", () => {
         },
       },
     });
-    const scan = await app.inject({
-      method: "POST",
-      url: "/v1/scans/iac",
-      headers: auth("admin-token"),
-      payload: { plan, stackName: "prod" },
-    });
-    expect(scan.statusCode).toBe(201);
-    const summary = scan.json().data;
-    expect(summary.assetCount).toBe(2); // 스택 + 버킷
-    expect(summary.relationshipCount).toBe(1);
-    expect(summary.findingCount).toBe(1);
+    const { job } = await runScan(app, worker, "/v1/scans/iac", { plan, stackName: "prod" });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.assetCount).toBe(2); // 스택 + 버킷
+    expect(job.result.relationshipCount).toBe(1);
+    expect(job.result.findingCount).toBe(1);
 
     const findings = await app.inject({
       method: "GET",
@@ -220,22 +235,22 @@ describe("OmniGuard API", () => {
   });
 
   it("서비스 토폴로지: SW/IaC/벤더 리스크를 서비스 단위로 통합한다", async () => {
-    const a = makeApp(stubEnrich);
-    const h = auth("admin-token");
+    ({ app, worker } = makeSetup(stubEnrich));
+    const h = "admin-token";
 
     // 1) npm: lodash에 CRITICAL (스텁) → 점수 82
-    await a.inject({ method: "POST", url: "/v1/scans/npm", headers: h, payload: { packageJson: PKG_JSON } });
+    await runScan(app, worker, "/v1/scans/npm", { packageJson: PKG_JSON }, h);
     // 2) iac: 공개 S3 (HIGH)
     const plan = JSON.stringify({
       planned_values: { root_module: { resources: [
         { address: "aws_s3_bucket.x", type: "aws_s3_bucket", name: "x", values: { acl: "public-read" } },
       ] } },
     });
-    await a.inject({ method: "POST", url: "/v1/scans/iac", headers: h, payload: { plan } });
+    await runScan(app, worker, "/v1/scans/iac", { plan }, h);
     // 3) vendor: Acme SOC2 누락 (HIGH)
-    await a.inject({ method: "POST", url: "/v1/scans/vendor", headers: h, payload: { inventory: VENDOR_YAML } });
+    await runScan(app, worker, "/v1/scans/vendor", { inventory: VENDOR_YAML }, h);
 
-    // 4) service: 세 도메인 자산에 연결
+    // 4) service: 세 도메인 자산에 연결 (앞 작업들이 모두 영속화된 뒤 실행됨)
     const manifest = [
       "services:",
       "  - name: Checkout API",
@@ -244,16 +259,27 @@ describe("OmniGuard API", () => {
       "    hostedOn: [aws_s3_bucket.x]",
       "    providedBy: [acme.com]",
     ].join("\n");
-    const svc = await a.inject({ method: "POST", url: "/v1/scans/service", headers: h, payload: { manifest } });
-    expect(svc.statusCode).toBe(201);
-    expect(svc.json().data).toMatchObject({ serviceCount: 1, edgeCount: 3, unresolved: [] });
+    const { job } = await runScan(app, worker, "/v1/scans/service", { manifest }, h);
+    expect(job.status).toBe("succeeded");
+    expect(job.result).toMatchObject({ serviceCount: 1, edgeCount: 3, unresolved: [] });
 
     // 5) 영향도: 서비스가 최악 도메인(lodash, 82)을 통합 상속
-    const impact = await a.inject({ method: "GET", url: "/v1/impact", headers: h });
+    const impact = await app.inject({ method: "GET", url: "/v1/impact", headers: auth(h) });
     const row = impact.json().data.find((r: { asset: string }) => r.asset === "Checkout API");
     expect(row.inherited).toBe(true);
     expect(row.impactScore).toBe(82);
     expect(row.rootCause).toBe("lodash");
+  });
+
+  it("스캔 처리 중 오류는 작업을 failed로 만든다", async () => {
+    const boom: Enricher = async () => {
+      throw new Error("OSV 폭발");
+    };
+    ({ app, worker } = makeSetup(boom));
+    const { job } = await runScan(app, worker, "/v1/scans/npm", { packageJson: PKG_JSON });
+    expect(job.status).toBe("failed");
+    expect(job.error).toBe("OSV 폭발");
+    expect(job.result).toBeNull();
   });
 
   it("npm 스캔 본문 누락은 400", async () => {
