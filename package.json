@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "scan": "tsx apps/cli/src/index.ts",
     "scan:vendor": "tsx apps/cli/src/vendor.ts",
-    "serve": "tsx apps/api/src/index.ts"
+    "serve": "tsx apps/api/src/index.ts",
+    "web:dev": "pnpm --filter @omniguard/web dev",
+    "web:build": "pnpm --filter @omniguard/web build"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

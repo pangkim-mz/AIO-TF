@@ -18,6 +18,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
 | `apps/cli` | 수직 슬라이스 오케스트레이터 (`scan`, `scan:vendor`) |
 | `apps/api` | HTTP API (Fastify): 토큰 인증·테넌트 라우팅·RBAC·일관 응답 포맷 |
+| `apps/web` | 대시보드 (Next.js App Router): 자산·발견·영향도 시각화 |
 
 ## 사용법
 
@@ -92,6 +93,20 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 
 `/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`.
 lockfile 제공 시 정확한 버전, 없으면 레인지 근사치. (OSV 호출은 현재 동기 — 운영에서는 큐/비동기 권장.)
+
+## 대시보드 (`apps/web`)
+
+Next.js App Router. 서버 컴포넌트가 API를 호출해 렌더한다(토큰은 서버 환경변수, 클라이언트 비노출).
+
+```bash
+pnpm serve        # API (별도 터미널, 포트 3000)
+pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으로 자동 이동)
+# 환경변수: API_BASE_URL(기본 http://localhost:3000), API_TOKEN(기본 dev-token)
+```
+
+- 페이지: 대시보드(요약+상위 발견/영향도), 자산, 발견(심각도순), 영향도(전파/근원).
+- API 클라이언트(`lib/api.ts`)·포맷 로직(`lib/format.ts`)은 프레임워크 무관 순수 함수로 분리해 단위 테스트.
+- API 미가동 시 각 페이지가 에러 안내를 표시(접근성: `role="alert"`).
 
 ## 설계 원칙
 
