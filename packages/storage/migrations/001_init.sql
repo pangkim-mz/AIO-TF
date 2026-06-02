@@ -37,13 +37,26 @@ create table if not exists risk_score (
 );
 create index if not exists risk_score_tenant_idx on risk_score (tenant_id);
 
+create table if not exists asset_relationship (
+  id            text primary key,
+  tenant_id     text not null,
+  from_asset_id text not null,
+  to_asset_id   text not null,
+  type          text not null,          -- depends_on / provided_by / hosted_on / contains
+  data          jsonb not null,
+  unique (tenant_id, from_asset_id, to_asset_id, type)
+);
+create index if not exists asset_relationship_tenant_idx on asset_relationship (tenant_id);
+
 -- ── RLS ──────────────────────────────────────────────────────
-alter table asset      enable row level security;
-alter table asset      force  row level security;
-alter table finding    enable row level security;
-alter table finding    force  row level security;
-alter table risk_score enable row level security;
-alter table risk_score force  row level security;
+alter table asset              enable row level security;
+alter table asset              force  row level security;
+alter table finding            enable row level security;
+alter table finding            force  row level security;
+alter table risk_score         enable row level security;
+alter table risk_score         force  row level security;
+alter table asset_relationship enable row level security;
+alter table asset_relationship force  row level security;
 
 drop policy if exists asset_tenant_isolation on asset;
 create policy asset_tenant_isolation on asset
@@ -57,5 +70,10 @@ create policy finding_tenant_isolation on finding
 
 drop policy if exists risk_score_tenant_isolation on risk_score;
 create policy risk_score_tenant_isolation on risk_score
+  using (tenant_id = current_setting('omniguard.tenant_id', true))
+  with check (tenant_id = current_setting('omniguard.tenant_id', true));
+
+drop policy if exists asset_relationship_tenant_isolation on asset_relationship;
+create policy asset_relationship_tenant_isolation on asset_relationship
   using (tenant_id = current_setting('omniguard.tenant_id', true))
   with check (tenant_id = current_setting('omniguard.tenant_id', true));

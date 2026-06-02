@@ -14,6 +14,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/connector-vendor` | 벤더 인벤토리(YAML/JSON) → 자산 + 규칙 기반 컴플라이언스 평가 |
 | `packages/enrich-osv` | OSV.dev API로 CVE 매칭 (타임아웃·재시도·동시성 제한) |
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
+| `packages/graph` | 자산 그래프 위험 전파 (순환 안전, 영향도 산정) |
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
 | `apps/cli` | 수직 슬라이스 오케스트레이터 |
 
@@ -54,6 +55,16 @@ pnpm scan:vendor <path/to/vendors.yaml> --json
 - **계약 테스트**: 동일 테스트를 두 어댑터에 적용. Postgres는 `DATABASE_URL`이 있을 때만 실행.
 
 마이그레이션: `packages/storage/migrations/001_init.sql`.
+
+## 영향도 전파 (Asset Graph)
+
+`packages/graph`는 자산 관계(`AssetRelationship`)를 따라 리스크를 전파한다.
+엣지 `from -[depends_on]-> to`는 "from이 to에 영향받음"을 의미하므로 리스크가
+근원(to) → 영향받는 자산(from)으로 흐른다: `impact(x) = max(own(x), max impact(자식))`.
+
+- npm 커넥터는 루트 애플리케이션 자산 + 각 의존성에 대한 `depends_on` 엣지를 생성한다.
+- 자체 취약점이 없는 애플리케이션도 의존성의 리스크를 상속받아 영향도 우선순위에 노출된다.
+- 순환 참조는 안전하게 차단된다. CLI(`pnpm scan`)는 점수 테이블 뒤에 "영향도 전파" 섹션을 출력한다.
 
 ## 설계 원칙
 

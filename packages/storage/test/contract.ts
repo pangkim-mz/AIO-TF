@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   type Asset,
+  type AssetRelationship,
   type Finding,
   type RiskScore,
   newId,
@@ -49,6 +50,20 @@ function makeFinding(tenantId: string, assetId: string, sfid: string): Finding {
     detectedAt: ts,
     resolvedAt: null,
     raw: {},
+  };
+}
+
+function makeRel(
+  tenantId: string,
+  from: string,
+  to: string,
+): AssetRelationship {
+  return {
+    id: newId(),
+    tenantId,
+    fromAssetId: from,
+    toAssetId: to,
+    type: "depends_on",
   };
 }
 
@@ -132,6 +147,20 @@ export function repositoryContract(
       const scores = await repo.listScores(tenant);
       expect(scores).toHaveLength(1);
       expect(scores[0]!.score).toBe(90);
+    });
+
+    it("관계는 (from, to, type) 기준 멱등이며 테넌트 격리된다", async () => {
+      const tenant = newId();
+      const other = newId();
+      const from = newId();
+      const to = newId();
+      await repo.upsertRelationships(tenant, [makeRel(tenant, from, to)]);
+      await repo.upsertRelationships(tenant, [makeRel(tenant, from, to)]);
+
+      const rels = await repo.listRelationships(tenant);
+      expect(rels).toHaveLength(1); // 멱등
+      expect(rels[0]!.fromAssetId).toBe(from);
+      expect(await repo.listRelationships(other)).toHaveLength(0); // 격리
     });
   });
 }

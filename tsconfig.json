@@ -6,6 +6,7 @@
       "@omniguard/schema": ["packages/schema/src/index.ts"],
       "@omniguard/connector-npm": ["packages/connector-npm/src/index.ts"],
       "@omniguard/connector-vendor": ["packages/connector-vendor/src/index.ts"],
+      "@omniguard/graph": ["packages/graph/src/index.ts"],
       "@omniguard/storage": ["packages/storage/src/index.ts"],
       "@omniguard/enrich-osv": ["packages/enrich-osv/src/index.ts"],
       "@omniguard/scoring": ["packages/scoring/src/index.ts"]

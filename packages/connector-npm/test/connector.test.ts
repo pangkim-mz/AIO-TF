@@ -21,15 +21,18 @@ describe("cleanVersion", () => {
 });
 
 describe("scanPackageJson", () => {
-  it("prod/dev 의존성을 자산으로 변환한다", async () => {
+  it("prod/dev 의존성을 자산으로 변환하고 depends_on 엣지를 만든다", async () => {
     const tenantId = newId();
-    const assets = await scanPackageJson(fixture, tenantId);
+    const { assets, relationships } = await scanPackageJson(fixture, tenantId);
 
-    // local-pkg(file:)는 제외 → 3개
-    expect(assets).toHaveLength(3);
+    const deps = assets.filter((a) => a.tags.role !== "application");
+    const root = assets.find((a) => a.tags.role === "application");
 
-    const lodash = assets.find((a) => a.name === "lodash");
-    expect(lodash).toBeDefined();
+    // local-pkg(file:)는 제외 → 의존성 3개 + 루트 1개
+    expect(deps).toHaveLength(3);
+    expect(root?.name).toBe("sample-app");
+
+    const lodash = deps.find((a) => a.name === "lodash");
     expect(lodash?.tenantId).toBe(tenantId);
     expect(lodash?.tags.scope).toBe("prod");
     if (lodash?.attributes.type === "software_component") {
@@ -37,7 +40,12 @@ describe("scanPackageJson", () => {
       expect(lodash.attributes.version).toBe("4.17.20");
     }
 
-    const vitest = assets.find((a) => a.name === "vitest");
+    const vitest = deps.find((a) => a.name === "vitest");
     expect(vitest?.tags.scope).toBe("dev");
+
+    // 루트 → 각 의존성 depends_on 엣지 3개
+    expect(relationships).toHaveLength(3);
+    expect(relationships.every((r) => r.fromAssetId === root?.id)).toBe(true);
+    expect(relationships.every((r) => r.type === "depends_on")).toBe(true);
   });
 });

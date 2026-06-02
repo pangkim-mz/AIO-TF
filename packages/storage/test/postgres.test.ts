@@ -37,6 +37,8 @@ if (!url) {
     listFindings: (t) => base.listFindings(t),
     upsertScores: (t, s) => base.upsertScores(t, s),
     listScores: (t) => base.listScores(t),
+    upsertRelationships: (t, r) => base.upsertRelationships(t, r),
+    listRelationships: (t) => base.listRelationships(t),
     close: async () => {},
   }));
 }

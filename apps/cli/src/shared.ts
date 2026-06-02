@@ -1,5 +1,11 @@
-import { type Asset, type Finding, type RiskScore } from "@omniguard/schema";
+import {
+  type Asset,
+  type AssetRelationship,
+  type Finding,
+  type RiskScore,
+} from "@omniguard/schema";
 import { scoreFinding } from "@omniguard/scoring";
+import { propagateRisk } from "@omniguard/graph";
 import {
   InMemoryRepository,
   PostgresRepository,
@@ -27,6 +33,7 @@ export async function finishRun(
   tenantId: string,
   assets: readonly Asset[],
   findings: readonly Finding[],
+  relationships: readonly AssetRelationship[],
   opts: { asJson: boolean; title: string },
 ): Promise<void> {
   const assetById = new Map<string, Asset>(assets.map((a) => [a.id, a]));
@@ -53,6 +60,9 @@ export async function finishRun(
     return;
   }
   printReport(rows, opts.title);
+  if (relationships.length > 0) {
+    printImpact(assets, relationships, findings, scoreByFinding);
+  }
 }
 
 function toJson(row: ReportRow): Record<string, unknown> {
@@ -80,4 +90,49 @@ function printReport(rows: readonly ReportRow[], title: string): void {
     console.log(`${s}  ${sev}  ${name}  ${finding.sourceFindingId}`);
   }
   console.log(`\n총 ${rows.length}건. 점수 내림차순 정렬.\n`);
+}
+
+/** 자산별 직접 리스크(자기 발견 중 최대 점수) 맵을 만든다. */
+function ownScoreByAsset(
+  findings: readonly Finding[],
+  scoreByFinding: ReadonlyMap<string, RiskScore>,
+): Map<string, number> {
+  const own = new Map<string, number>();
+  for (const finding of findings) {
+    const score = scoreByFinding.get(finding.id);
+    if (!score) continue;
+    const prev = own.get(finding.assetId) ?? 0;
+    if (score.score > prev) own.set(finding.assetId, score.score);
+  }
+  return own;
+}
+
+function printImpact(
+  assets: readonly Asset[],
+  relationships: readonly AssetRelationship[],
+  findings: readonly Finding[],
+  scoreByFinding: ReadonlyMap<string, RiskScore>,
+): void {
+  const own = ownScoreByAsset(findings, scoreByFinding);
+  const impacts = propagateRisk(assets, relationships, own);
+  const nameById = new Map(assets.map((a) => [a.id, a.name]));
+
+  const inherited = [...impacts.values()]
+    .filter((r) => r.inherited)
+    .sort((a, b) => b.impactScore - a.impactScore);
+
+  if (inherited.length === 0) return;
+
+  console.log("=== 영향도 전파 (의존성 리스크 → 영향받는 자산) ===\n");
+  console.log("IMPACT  ASSET                  ← 근원(ROOT CAUSE)");
+  console.log("------  ---------------------  --------------------");
+  for (const r of inherited) {
+    const impact = String(r.impactScore).padStart(6);
+    const name = (nameById.get(r.assetId) ?? r.assetId).slice(0, 21).padEnd(21);
+    const cause = r.rootCauseAssetId
+      ? (nameById.get(r.rootCauseAssetId) ?? r.rootCauseAssetId)
+      : "-";
+    console.log(`${impact}  ${name}  ← ${cause}`);
+  }
+  console.log("");
 }

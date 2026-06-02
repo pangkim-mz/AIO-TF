@@ -1,4 +1,9 @@
-import type { Asset, Finding, RiskScore } from "@omniguard/schema";
+import type {
+  Asset,
+  AssetRelationship,
+  Finding,
+  RiskScore,
+} from "@omniguard/schema";
 
 /**
  * 테넌트 범위 영속화 포트. 모든 작업은 tenantId로 범위가 제한된다.
@@ -19,6 +24,12 @@ export interface Repository {
     scores: readonly RiskScore[],
   ): Promise<RiskScore[]>;
   listScores(tenantId: string): Promise<RiskScore[]>;
+
+  upsertRelationships(
+    tenantId: string,
+    relationships: readonly AssetRelationship[],
+  ): Promise<AssetRelationship[]>;
+  listRelationships(tenantId: string): Promise<AssetRelationship[]>;
 
   close(): Promise<void>;
 }

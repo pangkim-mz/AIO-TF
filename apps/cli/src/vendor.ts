@@ -33,7 +33,7 @@ async function main(): Promise<void> {
     console.error(`      → ${findings.length}개 리스크`);
 
     console.error(`[3/3] 점수 산정 · 리포트`);
-    await finishRun(repo, tenantId, assets, findings, {
+    await finishRun(repo, tenantId, assets, findings, [], {
       asJson,
       title: "벤더/서드파티",
     });

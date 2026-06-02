@@ -32,6 +32,9 @@ importers:
       '@omniguard/enrich-osv':
         specifier: workspace:*
         version: link:../../packages/enrich-osv
+      '@omniguard/graph':
+        specifier: workspace:*
+        version: link:../../packages/graph
       '@omniguard/schema':
         specifier: workspace:*
         version: link:../../packages/schema
@@ -74,6 +77,12 @@ importers:
       zod:
         specifier: ^3.24.1
         version: 3.25.76
+
+  packages/graph:
+    dependencies:
+      '@omniguard/schema':
+        specifier: workspace:*
+        version: link:../schema
 
   packages/schema:
     dependencies:

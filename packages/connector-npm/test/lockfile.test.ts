@@ -31,7 +31,7 @@ describe("resolveInstalledVersions", () => {
 
 describe("scanPackageJson + lockfile", () => {
   it("npm 프로젝트는 레인지가 아닌 lockfile 버전을 사용한다", async () => {
-    const assets = await scanPackageJson(
+    const { assets } = await scanPackageJson(
       `${fixtureDir("npm-project")}/package.json`,
       newId(),
     );
@@ -45,7 +45,7 @@ describe("scanPackageJson + lockfile", () => {
   });
 
   it("lockfile이 없으면 레인지 근사치로 폴백한다", async () => {
-    const assets = await scanPackageJson(
+    const { assets } = await scanPackageJson(
       `${fixtureDir("npm-project")}/../sample-package.json`,
       newId(),
     );

@@ -1,4 +1,9 @@
-import type { Asset, Finding, RiskScore } from "@omniguard/schema";
+import type {
+  Asset,
+  AssetRelationship,
+  Finding,
+  RiskScore,
+} from "@omniguard/schema";
 import { type Repository, assetIdentifier } from "./port";
 
 /** 자연키 충돌 시 id/firstSeen을 보존하며 나머지는 새 값으로 갱신한다. */
@@ -15,6 +20,7 @@ export class InMemoryRepository implements Repository {
   private readonly assets = new Map<string, Map<string, Asset>>();
   private readonly findings = new Map<string, Map<string, Finding>>();
   private readonly scores = new Map<string, Map<string, RiskScore>>();
+  private readonly relationships = new Map<string, Map<string, AssetRelationship>>();
 
   private bucket<T>(store: Map<string, Map<string, T>>, tenantId: string): Map<string, T> {
     let b = store.get(tenantId);
@@ -74,6 +80,26 @@ export class InMemoryRepository implements Repository {
 
   async listScores(tenantId: string): Promise<RiskScore[]> {
     return [...this.bucket(this.scores, tenantId).values()];
+  }
+
+  async upsertRelationships(
+    tenantId: string,
+    relationships: readonly AssetRelationship[],
+  ): Promise<AssetRelationship[]> {
+    const bucket = this.bucket(this.relationships, tenantId);
+    return relationships.map((rel) => {
+      const key = `${rel.fromAssetId}->${rel.toAssetId}:${rel.type}`;
+      const existing = bucket.get(key);
+      const stored = existing
+        ? { ...rel, id: existing.id } // id 보존
+        : { ...rel, tenantId };
+      bucket.set(key, stored);
+      return stored;
+    });
+  }
+
+  async listRelationships(tenantId: string): Promise<AssetRelationship[]> {
+    return [...this.bucket(this.relationships, tenantId).values()];
   }
 
   async close(): Promise<void> {

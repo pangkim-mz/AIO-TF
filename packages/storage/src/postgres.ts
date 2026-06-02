@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 import type { Pool, PoolClient } from "pg";
-import { Asset, Finding, RiskScore } from "@omniguard/schema";
+import { Asset, AssetRelationship, Finding, RiskScore } from "@omniguard/schema";
 import { type Repository, assetIdentifier } from "./port";
 
 export type PostgresOptions =
@@ -162,6 +162,46 @@ export class PostgresRepository implements Repository {
         [tenantId],
       );
       return rows.map((r) => RiskScore.parse(r.data));
+    });
+  }
+
+  async upsertRelationships(
+    tenantId: string,
+    relationships: readonly AssetRelationship[],
+  ): Promise<AssetRelationship[]> {
+    return this.withTenant(tenantId, async (client) => {
+      const out: AssetRelationship[] = [];
+      for (const rel of relationships) {
+        const row = { ...rel, tenantId };
+        const { rows } = await client.query<{ data: unknown }>(
+          `insert into asset_relationship
+             (id, tenant_id, from_asset_id, to_asset_id, type, data)
+           values ($1, $2, $3, $4, $5, $6::jsonb)
+           on conflict (tenant_id, from_asset_id, to_asset_id, type) do update
+             set data = jsonb_set(excluded.data, '{id}', asset_relationship.data->'id')
+           returning data`,
+          [
+            row.id,
+            tenantId,
+            row.fromAssetId,
+            row.toAssetId,
+            row.type,
+            JSON.stringify(row),
+          ],
+        );
+        out.push(AssetRelationship.parse(rows[0]!.data));
+      }
+      return out;
+    });
+  }
+
+  async listRelationships(tenantId: string): Promise<AssetRelationship[]> {
+    return this.withTenant(tenantId, async (client) => {
+      const { rows } = await client.query<{ data: unknown }>(
+        "select data from asset_relationship where tenant_id = $1 order by id",
+        [tenantId],
+      );
+      return rows.map((r) => AssetRelationship.parse(r.data));
     });
   }
 

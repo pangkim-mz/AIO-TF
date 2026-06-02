@@ -20,16 +20,26 @@ async function main(): Promise<void> {
   try {
     console.error(`[1/3] 자산 스캔: ${filePath}`);
     const scanned = await scanPackageJson(filePath, tenantId);
-    const assets = await repo.upsertAssets(tenantId, scanned);
-    console.error(`      → ${assets.length}개 의존성 자산`);
+    const assets = await repo.upsertAssets(tenantId, scanned.assets);
+    // upsert가 멱등 id를 확정할 수 있으므로 엣지 끝점을 영속화된 id로 재매핑한다.
+    const idMap = new Map(scanned.assets.map((a, i) => [a.id, assets[i]!.id]));
+    const remappedRels = scanned.relationships.map((r) => ({
+      ...r,
+      fromAssetId: idMap.get(r.fromAssetId) ?? r.fromAssetId,
+      toAssetId: idMap.get(r.toAssetId) ?? r.toAssetId,
+    }));
+    const relationships = await repo.upsertRelationships(tenantId, remappedRels);
+    console.error(
+      `      → ${assets.length}개 자산, ${relationships.length}개 의존 관계`,
+    );
 
     console.error(`[2/3] OSV 취약점 조회 중...`);
     const enriched = await enrichWithOsv(assets, tenantId);
     const findings = await repo.upsertFindings(tenantId, enriched);
     console.error(`      → ${findings.length}개 취약점`);
 
-    console.error(`[3/3] 점수 산정 · 리포트`);
-    await finishRun(repo, tenantId, assets, findings, {
+    console.error(`[3/3] 점수 산정 · 영향도 전파 · 리포트`);
+    await finishRun(repo, tenantId, assets, findings, relationships, {
       asJson,
       title: "SW 공급망",
     });
