@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { serverClient } from "../../lib/server-client";
 import {
   type ScanState,
+  performIacScan,
   performNpmScan,
   performVendorScan,
 } from "../../lib/scan";
@@ -37,6 +38,19 @@ export async function scanVendorAction(
   const state = await performVendorScan(
     serverClient(),
     field(formData, "inventory"),
+  );
+  if (state.status === "success") revalidateViews();
+  return state;
+}
+
+export async function scanIacAction(
+  _prev: ScanState,
+  formData: FormData,
+): Promise<ScanState> {
+  const state = await performIacScan(
+    serverClient(),
+    field(formData, "plan"),
+    field(formData, "stackName") || undefined,
   );
   if (state.status === "success") revalidateViews();
   return state;

@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@omniguard/connector-iac": "workspace:*",
     "@omniguard/connector-npm": "workspace:*",
     "@omniguard/connector-vendor": "workspace:*",
     "@omniguard/enrich-osv": "workspace:*",

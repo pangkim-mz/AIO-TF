@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "scan": "tsx apps/cli/src/index.ts",
     "scan:vendor": "tsx apps/cli/src/vendor.ts",
+    "scan:iac": "tsx apps/cli/src/iac.ts",
     "serve": "tsx apps/api/src/index.ts",
     "web:dev": "pnpm --filter @omniguard/web dev",
     "web:build": "pnpm --filter @omniguard/web build"

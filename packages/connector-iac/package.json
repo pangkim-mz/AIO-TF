@@ -1,0 +1,12 @@
+{
+  "name": "@omniguard/connector-iac",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@omniguard/schema": "workspace:*",
+    "zod": "^3.24.1"
+  }
+}

@@ -61,6 +61,25 @@ export function NpmScanForm({ action }: { action: ScanAction }): ReactNode {
   );
 }
 
+export function IacScanForm({ action }: { action: ScanAction }): ReactNode {
+  const [state, formAction] = useFormState(action, initialScanState);
+  return (
+    <form action={formAction} className="scan-form">
+      <label htmlFor="iac-stack">스택 이름 (선택)</label>
+      <input id="iac-stack" name="stackName" placeholder="terraform-stack" />
+      <label htmlFor="iac-plan">Terraform plan JSON (terraform show -json)</label>
+      <textarea
+        id="iac-plan"
+        name="plan"
+        rows={12}
+        placeholder='{ "planned_values": { "root_module": { "resources": [ ... ] } } }'
+      />
+      <SubmitButton label="IaC 스캔" />
+      <ScanResult state={state} />
+    </form>
+  );
+}
+
 export function VendorScanForm({ action }: { action: ScanAction }): ReactNode {
   const [state, formAction] = useFormState(action, initialScanState);
   return (

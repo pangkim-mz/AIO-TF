@@ -184,7 +184,8 @@ th.num {
 }
 
 .scan-form textarea,
-.scan-form select {
+.scan-form select,
+.scan-form input {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);

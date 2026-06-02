@@ -1,4 +1,9 @@
-import { ApiClientError, type NpmScanInput, type ScanSummary } from "./api";
+import {
+  ApiClientError,
+  type IacScanInput,
+  type NpmScanInput,
+  type ScanSummary,
+} from "./api";
 
 /** 폼 제출 결과 상태 (useFormState용). */
 export interface ScanState {
@@ -11,6 +16,7 @@ export const initialScanState: ScanState = { status: "idle" };
 
 type NpmScanner = { scanNpm(input: NpmScanInput): Promise<ScanSummary> };
 type VendorScanner = { scanVendor(inventory: string): Promise<ScanSummary> };
+type IacScanner = { scanIac(input: IacScanInput): Promise<ScanSummary> };
 
 function toErrorState(error: unknown): ScanState {
   if (error instanceof ApiClientError) {
@@ -46,6 +52,25 @@ export async function performVendorScan(
   }
   try {
     const summary = await client.scanVendor(inventory);
+    return { status: "success", summary };
+  } catch (error) {
+    return toErrorState(error);
+  }
+}
+
+export async function performIacScan(
+  client: IacScanner,
+  plan: string,
+  stackName?: string,
+): Promise<ScanState> {
+  if (plan.trim() === "") {
+    return { status: "error", message: "Terraform plan JSON을 입력하세요." };
+  }
+  try {
+    const summary = await client.scanIac({
+      plan,
+      stackName: stackName?.trim() || undefined,
+    });
     return { status: "success", summary };
   } catch (error) {
     return toErrorState(error);

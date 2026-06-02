@@ -1,6 +1,11 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
-import { type Asset, type Finding, type RiskScore } from "@omniguard/schema";
+import {
+  type Asset,
+  type AssetRelationship,
+  type Finding,
+  type RiskScore,
+} from "@omniguard/schema";
 import { scoreFinding } from "@omniguard/scoring";
 import { propagateRisk } from "@omniguard/graph";
 import {
@@ -8,6 +13,7 @@ import {
   scanVendorInventoryContent,
 } from "@omniguard/connector-vendor";
 import { scanPackageContent } from "@omniguard/connector-npm";
+import { evaluateIac, scanTerraformPlanContent } from "@omniguard/connector-iac";
 import { enrichWithOsv } from "@omniguard/enrich-osv";
 import type { Repository } from "@omniguard/storage";
 import { ApiError, sendError, sendOk } from "./envelope";
@@ -40,6 +46,11 @@ const ScanNpmBody = z.object({
   packageJson: z.string().min(1),
   lockfile: z.string().optional(),
   lockfileType: z.enum(["npm", "pnpm"]).optional(),
+});
+
+const ScanIacBody = z.object({
+  plan: z.string().min(1), // terraform show -json 출력
+  stackName: z.string().optional(),
 });
 
 function bearerToken(request: FastifyRequest): string | null {
@@ -138,6 +149,14 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       const summary = await runNpmScan(deps.repo, enrich, principal.tenantId, input);
       sendOk(reply, summary, 201);
     });
+
+    api.post("/v1/scans/iac", async (request, reply) => {
+      const principal = principalOf(request);
+      requireWrite(principal);
+      const { plan, stackName } = ScanIacBody.parse(request.body);
+      const summary = await runIacScan(deps.repo, principal.tenantId, plan, stackName);
+      sendOk(reply, summary, 201);
+    });
   });
 
   return app;
@@ -195,16 +214,13 @@ async function runVendorScan(
   };
 }
 
-async function runNpmScan(
+/** 자산을 저장하고, 엣지 끝점을 영속화된 멱등 id로 재매핑해 관계를 저장한다. */
+async function persistScan(
   repo: Repository,
-  enrich: Enricher,
   tenantId: string,
-  input: { packageJson: string; lockfile?: string; lockfileType?: "npm" | "pnpm" },
-): Promise<ScanSummary> {
-  const scanned = scanPackageContent(input, tenantId);
+  scanned: { assets: Asset[]; relationships: AssetRelationship[] },
+): Promise<{ assets: Asset[]; relationships: AssetRelationship[] }> {
   const assets = await repo.upsertAssets(tenantId, scanned.assets);
-
-  // 엣지 끝점을 영속화된 멱등 id로 재매핑
   const idMap = new Map(scanned.assets.map((a, i) => [a.id, assets[i]!.id]));
   const remapped = scanned.relationships.map((r) => ({
     ...r,
@@ -212,9 +228,42 @@ async function runNpmScan(
     toAssetId: idMap.get(r.toAssetId) ?? r.toAssetId,
   }));
   const relationships = await repo.upsertRelationships(tenantId, remapped);
+  return { assets, relationships };
+}
 
+async function runNpmScan(
+  repo: Repository,
+  enrich: Enricher,
+  tenantId: string,
+  input: { packageJson: string; lockfile?: string; lockfileType?: "npm" | "pnpm" },
+): Promise<ScanSummary> {
+  const { assets, relationships } = await persistScan(
+    repo,
+    tenantId,
+    scanPackageContent(input, tenantId),
+  );
   const enriched = await enrich(assets, tenantId);
   const findings = await repo.upsertFindings(tenantId, enriched);
+  const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
+
+  return {
+    assetCount: assets.length,
+    relationshipCount: relationships.length,
+    findingCount: findings.length,
+    topScore,
+  };
+}
+
+async function runIacScan(
+  repo: Repository,
+  tenantId: string,
+  plan: string,
+  stackName: string | undefined,
+): Promise<ScanSummary> {
+  const scanned = scanTerraformPlanContent(plan, tenantId, { stackName });
+  const { assets, relationships } = await persistScan(repo, tenantId, scanned);
+  const evaluated = evaluateIac(assets, scanned.resources, tenantId);
+  const findings = await repo.upsertFindings(tenantId, evaluated);
   const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
 
   return {

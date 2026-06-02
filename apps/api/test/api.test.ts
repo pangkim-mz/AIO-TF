@@ -184,6 +184,41 @@ describe("OmniGuard API", () => {
     expect(appRow.rootCause).toBe("lodash");
   });
 
+  it("iac 스캔 → 스택 + 리소스 + contains 엣지, 미설정 발견", async () => {
+    const plan = JSON.stringify({
+      planned_values: {
+        root_module: {
+          resources: [
+            {
+              address: "aws_s3_bucket.x",
+              type: "aws_s3_bucket",
+              name: "x",
+              values: { acl: "public-read" },
+            },
+          ],
+        },
+      },
+    });
+    const scan = await app.inject({
+      method: "POST",
+      url: "/v1/scans/iac",
+      headers: auth("admin-token"),
+      payload: { plan, stackName: "prod" },
+    });
+    expect(scan.statusCode).toBe(201);
+    const summary = scan.json().data;
+    expect(summary.assetCount).toBe(2); // 스택 + 버킷
+    expect(summary.relationshipCount).toBe(1);
+    expect(summary.findingCount).toBe(1);
+
+    const findings = await app.inject({
+      method: "GET",
+      url: "/v1/findings",
+      headers: auth("admin-token"),
+    });
+    expect(findings.json().data[0].category).toBe("misconfiguration");
+  });
+
   it("npm 스캔 본문 누락은 400", async () => {
     const res = await app.inject({
       method: "POST",

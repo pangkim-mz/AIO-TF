@@ -1,0 +1,49 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.0",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_s3_bucket.public_data",
+          "type": "aws_s3_bucket",
+          "name": "public_data",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": { "bucket": "public-data", "acl": "public-read" }
+        },
+        {
+          "address": "aws_s3_bucket.private_data",
+          "type": "aws_s3_bucket",
+          "name": "private_data",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "values": { "bucket": "private-data", "acl": "private" }
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.network",
+          "resources": [
+            {
+              "address": "module.network.aws_security_group.web",
+              "type": "aws_security_group",
+              "name": "web",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "values": {
+                "ingress": [
+                  { "from_port": 22, "to_port": 22, "cidr_blocks": ["0.0.0.0/0"] }
+                ]
+              }
+            },
+            {
+              "address": "module.network.aws_db_instance.main",
+              "type": "aws_db_instance",
+              "name": "main",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "values": { "publicly_accessible": true, "storage_encrypted": false }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

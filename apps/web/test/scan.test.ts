@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { ApiClientError } from "../lib/api";
-import { performNpmScan, performVendorScan } from "../lib/scan";
+import { performIacScan, performNpmScan, performVendorScan } from "../lib/scan";
 
 describe("performNpmScan", () => {
   it("빈 입력은 호출 없이 에러 상태", async () => {
@@ -53,5 +53,30 @@ describe("performVendorScan", () => {
     const state = await performVendorScan(client, "");
     expect(state.status).toBe("error");
     expect(client.scanVendor).not.toHaveBeenCalled();
+  });
+});
+
+describe("performIacScan", () => {
+  it("성공 시 success 상태", async () => {
+    const summary = {
+      assetCount: 2,
+      relationshipCount: 1,
+      findingCount: 1,
+      topScore: 68,
+    };
+    const client = { scanIac: vi.fn(async () => summary) };
+    const state = await performIacScan(client, '{"planned_values":{}}', "prod");
+    expect(state.status).toBe("success");
+    expect(client.scanIac).toHaveBeenCalledWith({
+      plan: '{"planned_values":{}}',
+      stackName: "prod",
+    });
+  });
+
+  it("빈 입력은 호출 없이 에러", async () => {
+    const client = { scanIac: vi.fn() };
+    const state = await performIacScan(client, "   ");
+    expect(state.status).toBe("error");
+    expect(client.scanIac).not.toHaveBeenCalled();
   });
 });

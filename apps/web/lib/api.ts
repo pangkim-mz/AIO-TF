@@ -28,6 +28,11 @@ export interface NpmScanInput {
   lockfileType?: "npm" | "pnpm";
 }
 
+export interface IacScanInput {
+  plan: string;
+  stackName?: string;
+}
+
 type Envelope<T> =
   | { ok: true; data: T }
   | { ok: false; error: { code: string; message: string } };
@@ -103,6 +108,12 @@ export class ApiClient {
     return this.request<ScanSummary>("/v1/scans/vendor", {
       method: "POST",
       body: JSON.stringify({ inventory }),
+    });
+  }
+  scanIac(input: IacScanInput): Promise<ScanSummary> {
+    return this.request<ScanSummary>("/v1/scans/iac", {
+      method: "POST",
+      body: JSON.stringify(input),
     });
   }
 }

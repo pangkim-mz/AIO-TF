@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { NpmScanForm, VendorScanForm } from "./forms";
-import { scanNpmAction, scanVendorAction } from "./actions";
+import { IacScanForm, NpmScanForm, VendorScanForm } from "./forms";
+import { scanIacAction, scanNpmAction, scanVendorAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,10 @@ export default function ScanPage(): ReactNode {
         <section>
           <h2>벤더 / 서드파티</h2>
           <VendorScanForm action={scanVendorAction} />
+        </section>
+        <section>
+          <h2>클라우드 / 인프라 (IaC)</h2>
+          <IacScanForm action={scanIacAction} />
         </section>
       </div>
     </>

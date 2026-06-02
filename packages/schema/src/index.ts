@@ -39,10 +39,13 @@ const VendorAttrs = z.object({
   certifications: z.array(z.string()).default([]),
 });
 
+export const CloudProvider = z.enum(["aws", "azure", "gcp"]);
+export type CloudProvider = z.infer<typeof CloudProvider>;
+
 const CloudResourceAttrs = z.object({
   type: z.literal("cloud_resource"),
   resourceId: z.string(), // 자연키: arn:aws:s3:::bucket
-  provider: z.enum(["aws", "azure", "gcp"]),
+  provider: CloudProvider,
   resourceType: z.string(),
   region: z.string().nullable(),
 });

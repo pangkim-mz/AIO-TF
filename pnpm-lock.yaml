@@ -23,6 +23,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@omniguard/connector-iac':
+        specifier: workspace:*
+        version: link:../../packages/connector-iac
       '@omniguard/connector-npm':
         specifier: workspace:*
         version: link:../../packages/connector-npm
@@ -53,6 +56,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@omniguard/connector-iac':
+        specifier: workspace:*
+        version: link:../../packages/connector-iac
       '@omniguard/connector-npm':
         specifier: workspace:*
         version: link:../../packages/connector-npm
@@ -96,6 +102,15 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.1
         version: 18.3.7(@types/react@18.3.29)
+
+  packages/connector-iac:
+    dependencies:
+      '@omniguard/schema':
+        specifier: workspace:*
+        version: link:../schema
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
 
   packages/connector-npm:
     dependencies:
