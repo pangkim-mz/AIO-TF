@@ -19,13 +19,31 @@ export type PostgresOptions =
   | { connectionString: string }
   | { pool: Pool };
 
-/** migrations/ 의 *.sql 을 파일명 순으로 모두 적용한다 (테스트/부트스트랩용). */
+// 동시 마이그레이션을 직렬화하기 위한 advisory lock 키(임의 상수, "omni").
+const MIGRATION_LOCK_KEY = 0x6f6d6e69;
+
+/**
+ * migrations/ 의 *.sql 을 파일명 순으로 모두 적용한다 (테스트/부트스트랩용).
+ *
+ * 여러 인스턴스가 동시에 부팅하며 migrate()를 호출할 수 있다. Postgres의
+ * `CREATE TABLE IF NOT EXISTS`는 동시 실행 시 원자적이지 않아(pg_type 유니크 충돌)
+ * 세션 advisory lock으로 한 번에 하나만 적용하도록 직렬화한다.
+ */
 export async function applyMigrations(pool: Pool): Promise<void> {
   const dir = fileURLToPath(new URL("../migrations/", import.meta.url));
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();
-  for (const file of files) {
-    const sql = await readFile(join(dir, file), "utf8");
-    await pool.query(sql);
+  const sqls = await Promise.all(
+    files.map((file) => readFile(join(dir, file), "utf8")),
+  );
+  const client = await pool.connect();
+  try {
+    await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK_KEY]);
+    for (const sql of sqls) {
+      await client.query(sql);
+    }
+  } finally {
+    await client.query("select pg_advisory_unlock($1)", [MIGRATION_LOCK_KEY]);
+    client.release();
   }
 }
 
