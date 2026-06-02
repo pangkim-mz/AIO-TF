@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { fileURLToPath } from "node:url";
 import { newId } from "@omniguard/schema";
-import { cleanVersion, scanPackageJson } from "../src/index";
+import { cleanVersion, scanPackageContent, scanPackageJson } from "../src/index";
 
 const fixture = fileURLToPath(
   new URL("./fixtures/sample-package.json", import.meta.url),
@@ -47,5 +47,35 @@ describe("scanPackageJson", () => {
     expect(relationships).toHaveLength(3);
     expect(relationships.every((r) => r.fromAssetId === root?.id)).toBe(true);
     expect(relationships.every((r) => r.type === "depends_on")).toBe(true);
+  });
+});
+
+describe("scanPackageContent", () => {
+  const packageJson = JSON.stringify({
+    name: "app",
+    version: "1.0.0",
+    dependencies: { lodash: "^4.17.20" },
+  });
+
+  it("npm lockfile 본문으로 정확한 버전을 해석한다", () => {
+    const lockfile = JSON.stringify({
+      lockfileVersion: 3,
+      packages: { "": {}, "node_modules/lodash": { version: "4.17.21" } },
+    });
+    const scan = scanPackageContent({ packageJson, lockfile }, newId());
+
+    const lodash = scan.assets.find((a) => a.name === "lodash");
+    if (lodash?.attributes.type === "software_component") {
+      expect(lodash.attributes.version).toBe("4.17.21");
+    }
+    expect(scan.relationships).toHaveLength(1);
+  });
+
+  it("lockfile이 없으면 레인지 근사치로 폴백한다", () => {
+    const scan = scanPackageContent({ packageJson }, newId());
+    const lodash = scan.assets.find((a) => a.name === "lodash");
+    if (lodash?.attributes.type === "software_component") {
+      expect(lodash.attributes.version).toBe("4.17.20");
+    }
   });
 });

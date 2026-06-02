@@ -95,6 +95,16 @@ function parsePnpmLock(content: string): Map<string, string> {
   return result;
 }
 
+export type LockfileType = "npm" | "pnpm";
+
+/** lockfile 텍스트를 직접 파싱한다 (파일 경로 대신 본문 입력, API용). */
+export function resolveVersionsFromLockfile(
+  content: string,
+  type: LockfileType,
+): Map<string, string> {
+  return type === "npm" ? parseNpmLock(content) : parsePnpmLock(content);
+}
+
 async function readIfExists(path: string): Promise<string | null> {
   try {
     return await readFile(path, "utf8");

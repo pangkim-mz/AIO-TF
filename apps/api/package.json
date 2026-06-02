@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@omniguard/connector-npm": "workspace:*",
     "@omniguard/connector-vendor": "workspace:*",
+    "@omniguard/enrich-osv": "workspace:*",
     "@omniguard/graph": "workspace:*",
     "@omniguard/schema": "workspace:*",
     "@omniguard/scoring": "workspace:*",

@@ -23,9 +23,15 @@ importers:
 
   apps/api:
     dependencies:
+      '@omniguard/connector-npm':
+        specifier: workspace:*
+        version: link:../../packages/connector-npm
       '@omniguard/connector-vendor':
         specifier: workspace:*
         version: link:../../packages/connector-vendor
+      '@omniguard/enrich-osv':
+        specifier: workspace:*
+        version: link:../../packages/enrich-osv
       '@omniguard/graph':
         specifier: workspace:*
         version: link:../../packages/graph

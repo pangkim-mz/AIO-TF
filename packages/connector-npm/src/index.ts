@@ -7,9 +7,19 @@ import {
   newId,
   now,
 } from "@omniguard/schema";
-import { resolveInstalledVersions, type VersionSource } from "./lockfile";
+import {
+  resolveInstalledVersions,
+  resolveVersionsFromLockfile,
+  type LockfileType,
+  type VersionSource,
+} from "./lockfile";
 
-export { resolveInstalledVersions, type VersionSource } from "./lockfile";
+export {
+  resolveInstalledVersions,
+  resolveVersionsFromLockfile,
+  type LockfileType,
+  type VersionSource,
+} from "./lockfile";
 
 const SOURCE_ID = "connector-npm";
 const ECOSYSTEM = "npm";
@@ -61,8 +71,7 @@ function collect(
 
 /**
  * package.json 경로를 읽어 자산(루트 앱 + 의존성)과 의존 관계를 생성한다.
- * 버전은 lockfile의 정확한 설치 버전을 우선 사용하고, 없으면 레인지 근사치로 폴백한다.
- * 루트 앱은 각 의존성에 대해 depends_on 엣지를 가져 영향도 전파의 기반이 된다.
+ * 인접한 lockfile(package-lock.json/pnpm-lock.yaml)을 자동 탐지해 정확한 버전을 해석한다.
  */
 export async function scanPackageJson(
   filePath: string,
@@ -71,7 +80,40 @@ export async function scanPackageJson(
   const raw = await readFile(filePath, "utf8");
   const pkg = PackageJson.parse(JSON.parse(raw));
   const installed = await resolveInstalledVersions(dirname(filePath));
+  return buildScan(pkg, installed, tenantId);
+}
 
+export interface PackageContentInput {
+  packageJson: string;
+  lockfile?: string;
+  lockfileType?: LockfileType;
+}
+
+/**
+ * package.json/lockfile 텍스트를 직접 받아 스캔한다 (파일시스템 미사용, API용).
+ * lockfileType 미지정 시 본문 형태로 추정('{' 시작이면 npm, 아니면 pnpm).
+ */
+export function scanPackageContent(
+  input: PackageContentInput,
+  tenantId: string,
+): PackageScan {
+  const pkg = PackageJson.parse(JSON.parse(input.packageJson));
+  let installed = new Map<string, string>();
+  if (input.lockfile !== undefined && input.lockfile.trim() !== "") {
+    const type =
+      input.lockfileType ??
+      (input.lockfile.trimStart().startsWith("{") ? "npm" : "pnpm");
+    installed = resolveVersionsFromLockfile(input.lockfile, type);
+  }
+  return buildScan(pkg, installed, tenantId);
+}
+
+/** 파싱된 package.json + 설치 버전 맵으로 자산/관계를 구성하는 공통 로직. */
+function buildScan(
+  pkg: z.infer<typeof PackageJson>,
+  installed: Map<string, string>,
+  tenantId: string,
+): PackageScan {
   const deps: DeclaredDependency[] = [
     ...collect(pkg.dependencies, "prod"),
     ...collect(pkg.devDependencies, "dev"),

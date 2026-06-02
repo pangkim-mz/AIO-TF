@@ -88,6 +88,10 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 | GET | `/v1/assets` `/findings` `/scores` `/relationships` | 인증 | 테넌트 데이터 조회 |
 | GET | `/v1/impact` | 인증 | 그래프 영향도 전파 결과 |
 | POST | `/v1/scans/vendor` | admin/analyst | 인벤토리 텍스트 스캔·영속화 |
+| POST | `/v1/scans/npm` | admin/analyst | package.json(+lockfile) 본문 스캔·OSV 보강·영속화 |
+
+`/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`.
+lockfile 제공 시 정확한 버전, 없으면 레인지 근사치. (OSV 호출은 현재 동기 — 운영에서는 큐/비동기 권장.)
 
 ## 설계 원칙
 
