@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 74 passed / 1 skipped(Postgres)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 79 passed / 1 skipped(Postgres)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -64,7 +64,12 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 ## 환경 주의사항 (Windows)
 
 - pnpm v11.5.0, `npm i -g pnpm`으로 설치(corepack은 Program Files 권한 오류).
-- `.npmrc`에 `verify-deps-before-run=false`(esbuild 빌드 스크립트 차단 우회; esbuild는 플랫폼 바이너리로 동작).
+  **pnpm 11.5.0은 Node 22.13+ 요구** → 로컬·CI 모두 Node 22 이상(CI는 `node-version: 22`).
+- 빌드 스크립트: pnpm 11은 `strictDepBuilds` 기본 활성 → 미승인 빌드가 있으면 `pnpm install`이
+  `ERR_PNPM_IGNORED_BUILDS`로 실패. esbuild는 플랫폼 바이너리로 동작하므로
+  `pnpm-workspace.yaml`의 `allowBuilds.esbuild: false`로 **빌드 비실행을 명시**(pnpm 10의
+  `onlyBuiltDependencies`/`ignoredBuiltDependencies`는 11에서 제거됨). `.npmrc`의
+  `verify-deps-before-run=false`는 실행 전 의존성 검증만 끈다.
 - **vitest flaky**: Windows Temp transform 캐시에서 가끔 `UNKNOWN` 오류로 일부 파일 미실행 → **재실행하면 정상**.
 - Next 실행은 pnpm 구조상 `apps/web`에서 `node node_modules/next/dist/bin/next start`
   (루트 `.bin/next` 셸심은 실패). `pnpm web:dev`/`web:build`는 정상.
@@ -79,7 +84,7 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 1. **스캔 비동기화(큐)** — 현재 OSV/스캔이 동기. POST가 jobId 반환 + 상태 폴링/조회 엔드포인트. 코어 아키텍처 변경 수반.
 2. **인증 고도화** — env 토큰 → 토큰 DB 또는 OIDC. 범위 큼/설계 결정 많음.
 
-완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결 후 push 시 실행),
+완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
 대시보드 서비스 뷰(`/services` + `lib/services.ts`).
 
 ### 알려진 한계

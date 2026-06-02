@@ -125,6 +125,8 @@
 12. `189fb24` 문서 정리 + 프로젝트 CLAUDE.md.
 13. `ebdbfb1` CI 파이프라인.
 14. `92d9e3c` 대시보드 서비스 뷰 — 새 API 없이 조회 조합(D6).
+15. `8c6f049` CI Node 20→22 — pnpm 11.5.0이 Node 22.13+ 요구(GitHub 연결 후 첫 실패 수정).
+16. `f20e1dd` pnpm 11 `allowBuilds.esbuild: false` — `strictDepBuilds`로 인한 `ERR_PNPM_IGNORED_BUILDS` 해소. **CI 첫 통과.**
 
 ---
 
@@ -136,9 +138,10 @@
 **1) 환경 확인** (코드를 바꾸기 전에 현재 상태가 green인지):
 ```bash
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
+node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
 pnpm typecheck && pnpm test     # 79 passed / 1 skipped 기대
-git log --oneline -3            # HEAD가 92d9e3c 인지
+git log --oneline -3            # HEAD가 f20e1dd 인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
 
@@ -154,9 +157,9 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 |---|---|---|
 | **스캔 비동기화(큐)** | OSV 호출이 동기라 대용량·장시간 스캔에 약함. `POST /v1/scans/*`가 `jobId`를 반환하고 상태 폴링/조회 엔드포인트 추가. 코어(서비스 계층)에 잡 상태 모델 필요 → `schema`에 영향 가능성 검토부터. | 높음 |
 | **인증 고도화** | env 토큰 → 토큰 DB 또는 OIDC. `apps/api/src/auth.ts`의 `AuthProvider`가 교체 지점(인터페이스는 이미 분리됨). DB 토큰부터 점진 도입 권장. | 중간 |
-| **GitHub 연결 + CI 가동** | CI 워크플로는 작성됐으나 remote가 없어 미실행. 저장소 생성·push하면 즉시 검증됨. 가장 빠른 가치. | 낮음 |
+| ~~GitHub 연결 + CI 가동~~ | **완료**(2026-06-02). remote `pangkim-mz/AIO-TF` 연결, push 트리거로 CI 가동. Node 22·pnpm 11 호환 수정 후 첫 통과(`f20e1dd`). | — |
 
-**권장 순서**: GitHub 연결(안전망 가동) → 인증 고도화(상용 필수, 착수 지점 명확) → 큐(가장 큰 구조 변경).
+**권장 순서**: ~~GitHub 연결~~(완료) → **인증 고도화**(상용 필수, 착수 지점 명확) → 큐(가장 큰 구조 변경).
 
 **4) 작업 규칙**: §4를 따른다. 새 도메인/기능이라면 코어 0줄 원칙을 먼저 점검하고,
 순수 로직은 `lib`/패키지로 분리해 단위 테스트. 끝나면 README·CLAUDE.md·이 문서·메모리를 갱신.
@@ -169,6 +172,3 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 - OSV의 CVSS 숫자 점수 파싱 미구현(현재 GHSA 텍스트 심각도만 매핑).
 - 스캔/보강이 동기(큐 없음) — 대용량·장시간 입력에 부적합.
 - 인증이 env 토큰 수준(토큰 DB/IdP 미도입).
-- `pnpm-workspace.yaml`에 `allowBuilds:` 플레이스홀더 블록이 남아 있음(무해하나 정리 대상,
-  실제 빌드 허용은 `onlyBuiltDependencies`가 처리).
-- CI는 git remote 미연결로 아직 미실행(GitHub 연결 시 가동).
