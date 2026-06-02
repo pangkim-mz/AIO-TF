@@ -80,7 +80,12 @@
   따라서 토큰 조회 자체는 테넌트 범위 밖(control-plane)이고, RLS를 걸면 조회가 막힌다. 데이터 평면
   테이블(asset/finding/…)의 RLS와는 역할이 다르다. 해시 저장은 DB 유출 시에도 토큰 원문 노출을 막는다.
 - **귀결**: `AuthProvider` 인터페이스는 그대로 두고 구현체만 교체(`InMemory`↔`Db`). 코어
-  (`schema`/`scoring`/`graph`) 변경 0줄. 발급/폐기 API와 OIDC는 같은 포트 위에 얹으면 된다.
+  (`schema`/`scoring`/`graph`) 변경 0줄.
+- **확장(OIDC, 완료)**: 같은 `AuthProvider` 인터페이스에 `OidcAuthProvider`(jose, JWKS 서명 검증 +
+  `iss`/`aud`/`exp`, claim→Principal 매핑)를 추가하고, `CompositeAuthProvider`로 [OIDC(사람) → DB 토큰(M2M)]
+  순서로 합성한다. API는 토큰을 발급하지 않는 **리소스 서버**(IdP가 발급, 우리는 검증만)라 로그인 플로우가
+  필요 없다. IdP는 미지정 — issuer/audience/jwksUri와 claim 이름을 `OMNIGUARD_OIDC`(env)로 받아 IdP 무관.
+  인터페이스가 토큰 문자열만 받으므로 opaque/JWT 두 방식이 한 진입점에 자연히 공존(D8의 설계 이점 재확인).
 
 ---
 
@@ -112,7 +117,7 @@
 - **새 도메인 추가**: 커넥터에 입력 파싱 + 규칙만 작성. 코어(`schema`/`scoring`/`graph`/`storage`)는
   변경하지 않는다. 이 불변식을 깨야 한다면 PR/커밋에 이유를 명시.
 - **테스트**: 기능과 함께 작성. 순수 로직은 프레임워크 무관 함수로 빼서 단위 테스트(예: `lib/format`, `lib/services`).
-  현재 **86 passed / 2 skipped**(Postgres 계약 2건은 `DATABASE_URL` 있을 때만).
+  현재 **94 passed / 2 skipped**(Postgres 계약 2건은 `DATABASE_URL` 있을 때만).
 - **커밋**: Conventional Commits, 한 커밋 한 변경, 커밋 전 `pnpm typecheck && pnpm test` 통과.
 - **CI**(`.github/workflows/ci.yml`): push/PR(main)에서 build-test(typecheck·test·web:build) +
   postgres(실제 DB로 계약 테스트). **단, git remote 미연결 → GitHub 연결 후 첫 push에 실행됨.**
@@ -138,6 +143,7 @@
 15. `8c6f049` CI Node 20→22 — pnpm 11.5.0이 Node 22.13+ 요구(GitHub 연결 후 첫 실패 수정).
 16. `f20e1dd` pnpm 11 `allowBuilds.esbuild: false` — `strictDepBuilds`로 인한 `ERR_PNPM_IGNORED_BUILDS` 해소. **CI 첫 통과.**
 17. 인증 DB 토큰화 — `TokenStore` 포트(InMemory·Postgres) + `DbAuthProvider`(sha256 해시 조회) — D8.
+18. OIDC 하이브리드 — `OidcAuthProvider`(jose, JWKS 검증) + `CompositeAuthProvider`(OIDC→토큰 폴백) — D8 확장.
 
 ---
 
@@ -151,7 +157,7 @@
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
-pnpm typecheck && pnpm test     # 86 passed / 2 skipped 기대
+pnpm typecheck && pnpm test     # 94 passed / 2 skipped 기대
 git log --oneline -3            # HEAD가 f20e1dd 인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
@@ -167,11 +173,11 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 | 작업 | 왜/착수 지점 | 난이도 |
 |---|---|---|
 | **스캔 비동기화(큐)** | OSV 호출이 동기라 대용량·장시간 스캔에 약함. `POST /v1/scans/*`가 `jobId`를 반환하고 상태 폴링/조회 엔드포인트 추가. 코어(서비스 계층)에 잡 상태 모델 필요 → `schema`에 영향 가능성 검토부터. | 높음 |
-| **인증: 발급/폐기 API + OIDC** | DB 토큰은 완료(D8). 남은 것: 토큰 발급/폐기 엔드포인트(admin 전용, 발급 시 원문 1회 노출 후 해시만 저장 — `TokenStore.upsertToken/deleteToken` 이미 존재), OIDC/IdP 연동. | 중간 |
-| ~~인증 DB 토큰화~~ | **완료**. `TokenStore` 포트 + `DbAuthProvider`(sha256 해시), `002_api_token.sql`. | — |
+| **토큰 발급/폐기 API** | DB 토큰·OIDC 완료(D8). 남은 것: 토큰 발급/폐기 엔드포인트(admin 전용, 발급 시 원문 1회 노출 후 해시만 저장 — `TokenStore.upsertToken/deleteToken` 이미 존재). | 중간 |
+| ~~인증 DB 토큰화 + OIDC~~ | **완료**. `TokenStore`+`DbAuthProvider`(sha256, `002_api_token.sql`), `OidcAuthProvider`+`CompositeAuthProvider`(jose, `OMNIGUARD_OIDC`). | — |
 | ~~GitHub 연결 + CI 가동~~ | **완료**(2026-06-02). remote `pangkim-mz/AIO-TF` 연결, push 트리거로 CI 가동. Node 22·pnpm 11 호환 수정 후 첫 통과(`f20e1dd`). | — |
 
-**권장 순서**: ~~GitHub 연결~~(완료) → ~~인증 DB 토큰화~~(완료) → 큐(가장 큰 구조 변경) 또는 토큰 발급 API.
+**권장 순서**: ~~GitHub 연결~~(완료) → ~~인증 DB 토큰화·OIDC~~(완료) → 큐(가장 큰 구조 변경) 또는 토큰 발급 API.
 
 **4) 작업 규칙**: §4를 따른다. 새 도메인/기능이라면 코어 0줄 원칙을 먼저 점검하고,
 순수 로직은 `lib`/패키지로 분리해 단위 테스트. 끝나면 README·CLAUDE.md·이 문서·메모리를 갱신.

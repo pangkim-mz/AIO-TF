@@ -92,7 +92,11 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
   - `DATABASE_URL` 설정 시 **토큰을 DB(`api_token`)에서 해석**(`DbAuthProvider`). 토큰 원문은
     저장하지 않고 **sha256 해시**만 보관한다. 시작 시 `OMNIGUARD_TOKENS`(JSON)를 DB에 멱등 시딩.
   - `DATABASE_URL` 미설정 시 인메모리 토큰(`InMemoryAuthProvider`, 개발용 `dev-token`).
-  - 추후 OIDC/IdP 및 토큰 발급·폐기 API로 확장 가능(`api_token`은 RLS 비대상 control-plane).
+  - **OIDC(하이브리드)**: `OMNIGUARD_OIDC`(JSON) 설정 시 IdP 발급 JWT를 검증한다(`OidcAuthProvider`,
+    리소스 서버 방식 — JWKS 서명 검증 + `iss`/`aud`/`exp`). `CompositeAuthProvider`가 OIDC(사람) →
+    DB 토큰(M2M/CI) 순으로 폴백. 설정: `{ issuer, audience, jwksUri, tenantClaim?, roleClaim? }`
+    (claim 기본값 `tenant_id`/`role`). IdP 무관 — claim 매핑만 env로 조정.
+  - 추후 토큰 발급·폐기 API로 확장 가능(`api_token`은 RLS 비대상 control-plane).
 - **인가(RBAC)**: 읽기는 인증된 모든 역할, 쓰기(스캔)는 `admin`/`analyst`만.
 - **일관 응답 포맷**: 성공 `{ ok: true, data }` / 실패 `{ ok: false, error: { code, message } }`
   (code=디버깅용, message=사용자용, 내부 오류는 비노출).

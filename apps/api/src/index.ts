@@ -9,9 +9,12 @@ import {
 } from "@omniguard/storage";
 import { buildServer } from "./server";
 import {
+  CompositeAuthProvider,
   DbAuthProvider,
   InMemoryAuthProvider,
+  OidcAuthProvider,
   type AuthProvider,
+  type OidcConfig,
   type Principal,
 } from "./auth";
 
@@ -47,10 +50,32 @@ async function seedTokens(store: TokenStore): Promise<void> {
   }
 }
 
+/**
+ * OIDC 설정을 로드한다(선택). OMNIGUARD_OIDC(JSON)가 있으면 OIDC 검증을 활성화한다.
+ * 필수: issuer, audience, jwksUri. 선택: tenantClaim/roleClaim(claim 이름 매핑).
+ */
+function loadOidc(): OidcConfig | null {
+  const raw = process.env.OMNIGUARD_OIDC;
+  if (!raw) return null;
+  const parsed = JSON.parse(raw) as Partial<OidcConfig>;
+  if (!parsed.issuer || !parsed.audience || !parsed.jwksUri) {
+    throw new Error(
+      "OMNIGUARD_OIDC에는 issuer, audience, jwksUri가 모두 필요합니다.",
+    );
+  }
+  return {
+    issuer: parsed.issuer,
+    audience: parsed.audience,
+    jwksUri: parsed.jwksUri,
+    tenantClaim: parsed.tenantClaim ?? "tenant_id",
+    roleClaim: parsed.roleClaim ?? "role",
+  };
+}
+
 async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
   let repo: Repository;
-  let auth: AuthProvider;
+  let tokenAuth: AuthProvider;
 
   if (url) {
     // 운영 경로: Postgres에 영속화하고 토큰도 DB에서 해석한다.
@@ -59,12 +84,19 @@ async function main(): Promise<void> {
     const tokenStore = new PostgresTokenStore({ connectionString: url });
     await seedTokens(tokenStore);
     repo = pgRepo;
-    auth = new DbAuthProvider(tokenStore);
+    tokenAuth = new DbAuthProvider(tokenStore);
   } else {
     // 로컬/개발 경로: 인메모리 영속화 + 인메모리 토큰.
     repo = new InMemoryRepository();
-    auth = new InMemoryAuthProvider(loadTokens());
+    tokenAuth = new InMemoryAuthProvider(loadTokens());
   }
+
+  // 하이브리드: OIDC(사람) 우선 시도 → 실패 시 토큰(M2M/CI)으로 폴백.
+  const oidc = loadOidc();
+  const auth: AuthProvider = oidc
+    ? new CompositeAuthProvider([new OidcAuthProvider(oidc), tokenAuth])
+    : tokenAuth;
+  if (oidc) console.error(`OIDC 활성화: issuer=${oidc.issuer}`);
 
   const app = buildServer({ repo, auth });
 
