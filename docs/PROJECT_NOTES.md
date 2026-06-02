@@ -139,7 +139,7 @@
 - **새 도메인 추가**: 커넥터에 입력 파싱 + 규칙만 작성. 코어(`schema`/`scoring`/`graph`/`storage`)는
   변경하지 않는다. 이 불변식을 깨야 한다면 PR/커밋에 이유를 명시.
 - **테스트**: 기능과 함께 작성. 순수 로직은 프레임워크 무관 함수로 빼서 단위 테스트(예: `lib/format`, `lib/services`).
-  현재 **103 passed / 3 skipped**(Postgres 계약 3건은 `DATABASE_URL` 있을 때만).
+  현재 **103 passed / 4 skipped**(Postgres 계약 4건은 `DATABASE_URL` 있을 때만).
 - **커밋**: Conventional Commits, 한 커밋 한 변경, 커밋 전 `pnpm typecheck && pnpm test` 통과.
 - **CI**(`.github/workflows/ci.yml`): push/PR(main)에서 build-test(typecheck·test·web:build) +
   postgres(실제 DB로 계약 테스트). **단, git remote 미연결 → GitHub 연결 후 첫 push에 실행됨.**
@@ -168,6 +168,10 @@
 18. OIDC 하이브리드 — `OidcAuthProvider`(jose, JWKS 검증) + `CompositeAuthProvider`(OIDC→토큰 폴백) — D8 확장.
 19. 스캔 비동기화 — `JobQueue` 포트(InMemory·Postgres) + `ScanWorker`(인프로세스), `POST→202+jobId`/`GET /v1/jobs/:id` — D9.
 
+> 위 17~19는 PR #1(`78683c2`)로 main 머지. 이후 머지 후 CI/로컬 검증에서 두 건을 고쳤다:
+20. `e1f23b6` advisory lock으로 동시 마이그레이션 직렬화 — PR #1 머지 후 CI postgres job이 병렬 `CREATE TABLE IF NOT EXISTS` 충돌(`pg_type` 23505)로 실패한 것 수정. 운영 다중 인스턴스에도 동일 레이스라 실버그. 재현 테스트 추가. PR #2(`ac8a2f1`).
+21. `5bf0d31` 대시보드 reads `no-store` — 로컬 구동 중 Next fetch 디스크 캐시(`.next/cache`)로 스캔 후에도 빈 화면이 남던 것 수정. 관제 대시보드는 항상 라이브. PR #3(`353e998`).
+
 ---
 
 ## 6. 다음 세션 시작 가이드
@@ -180,15 +184,21 @@
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
-pnpm typecheck && pnpm test     # 103 passed / 3 skipped 기대
-git log --oneline -5            # 인증·큐 작업 커밋 확인
+pnpm typecheck && pnpm test     # 103 passed / 4 skipped 기대
+git log --oneline -6            # HEAD가 353e998(PR #3 머지)인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
+> 현재 로컬 브랜치는 `main`만 있고 origin/main과 동기 상태(이전 작업 브랜치는 머지 후 삭제됨).
 
-**2) 직접 돌려보기**(선택):
+**2) 직접 돌려보기**(선택, 로컬에서 실증 완료된 흐름):
 ```bash
-pnpm serve        # API (포트 3000, dev-token/admin)
-pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크 확인
+# 포트 분리 필수: API와 Next 둘 다 기본 3000이라 충돌한다.
+pnpm serve                                                   # API :3000 (dev-token/admin)
+PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  # 대시보드 :3001
+# → http://localhost:3001/scan 에서 npm 폼에 {"name":"a","version":"1.0.0","dependencies":{"lodash":"4.17.4"}}
+#   넣고 실행하면 비동기 큐→OSV→점수→영속 후 /findings·/impact에 실제 취약점이 라이브로 뜬다.
+# 주의: API_BASE_URL은 127.0.0.1(IPv4)로 — localhost(::1)면 Next가 자기 자신을 호출한다.
+# 무DB(인메모리)라 재시작 시 데이터 소멸. 종료는 :3000/:3001 프로세스 kill.
 ```
 
 **3) 다음 작업 후보** (로드맵 [예정], 우선순위 의견 포함):

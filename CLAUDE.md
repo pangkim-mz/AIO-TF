@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 103 passed / 3 skipped(Postgres 계약 3건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 103 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -58,7 +58,9 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - 멀티테넌트: 코드 필터 + Postgres **RLS** 이중 방어. **운영은 비-슈퍼유저 역할로 접속해야**
   RLS가 강제됨(슈퍼유저 우회). 세션 변수 `omniguard.tenant_id`.
 - 멱등 upsert(자연키: asset=purl, finding=assetId+sourceFindingId, score=findingId). 재스캔 중복 없음.
-- 마이그레이션: `packages/storage/migrations/001_init.sql`(스캔 시 자동 적용).
+- 마이그레이션: `packages/storage/migrations/*.sql`(001 코어·002 토큰·003 작업큐, 파일명 순 자동 적용).
+  `applyMigrations`는 advisory lock(`pg_advisory_lock`)으로 동시 실행을 직렬화한다 — `CREATE TABLE IF NOT EXISTS`가
+  동시 실행에 원자적이지 않아(다중 인스턴스 부팅·병렬 테스트) `pg_type` 유니크 충돌이 났던 것을 막는다.
 
 ## API 규약
 
