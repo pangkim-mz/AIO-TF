@@ -72,6 +72,16 @@
 - **근거**: 첫 슬라이스(npm→OSV→점수)에서 스키마/파이프라인의 타당성을 일찍 검증하고,
   이후 도메인은 검증된 뼈대 위에 커넥터만 얹어 리스크를 줄인다.
 
+### D8. 인증 토큰은 control-plane 저장소에 해시로
+- **결정**: 토큰을 `packages/storage`의 별도 포트 `TokenStore`(InMemory·Postgres)에 두고,
+  `apps/api`의 `DbAuthProvider`가 sha256 해시로 조회한다. 토큰 원문은 어디에도 저장하지 않는다.
+  토큰 테이블(`api_token`)은 테넌트 RLS를 적용하지 않는다.
+- **근거**: 인증은 "어떤 테넌트인지"를 토큰으로 *알아내는* 단계라 테넌트 컨텍스트보다 먼저 일어난다.
+  따라서 토큰 조회 자체는 테넌트 범위 밖(control-plane)이고, RLS를 걸면 조회가 막힌다. 데이터 평면
+  테이블(asset/finding/…)의 RLS와는 역할이 다르다. 해시 저장은 DB 유출 시에도 토큰 원문 노출을 막는다.
+- **귀결**: `AuthProvider` 인터페이스는 그대로 두고 구현체만 교체(`InMemory`↔`Db`). 코어
+  (`schema`/`scoring`/`graph`) 변경 0줄. 발급/폐기 API와 OIDC는 같은 포트 위에 얹으면 된다.
+
 ---
 
 ## 3. 시스템 구조
@@ -102,7 +112,7 @@
 - **새 도메인 추가**: 커넥터에 입력 파싱 + 규칙만 작성. 코어(`schema`/`scoring`/`graph`/`storage`)는
   변경하지 않는다. 이 불변식을 깨야 한다면 PR/커밋에 이유를 명시.
 - **테스트**: 기능과 함께 작성. 순수 로직은 프레임워크 무관 함수로 빼서 단위 테스트(예: `lib/format`, `lib/services`).
-  현재 **79 passed / 1 skipped**(Postgres 계약은 `DATABASE_URL` 있을 때만).
+  현재 **86 passed / 2 skipped**(Postgres 계약 2건은 `DATABASE_URL` 있을 때만).
 - **커밋**: Conventional Commits, 한 커밋 한 변경, 커밋 전 `pnpm typecheck && pnpm test` 통과.
 - **CI**(`.github/workflows/ci.yml`): push/PR(main)에서 build-test(typecheck·test·web:build) +
   postgres(실제 DB로 계약 테스트). **단, git remote 미연결 → GitHub 연결 후 첫 push에 실행됨.**
@@ -127,6 +137,7 @@
 14. `92d9e3c` 대시보드 서비스 뷰 — 새 API 없이 조회 조합(D6).
 15. `8c6f049` CI Node 20→22 — pnpm 11.5.0이 Node 22.13+ 요구(GitHub 연결 후 첫 실패 수정).
 16. `f20e1dd` pnpm 11 `allowBuilds.esbuild: false` — `strictDepBuilds`로 인한 `ERR_PNPM_IGNORED_BUILDS` 해소. **CI 첫 통과.**
+17. 인증 DB 토큰화 — `TokenStore` 포트(InMemory·Postgres) + `DbAuthProvider`(sha256 해시 조회) — D8.
 
 ---
 
@@ -140,7 +151,7 @@
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
-pnpm typecheck && pnpm test     # 79 passed / 1 skipped 기대
+pnpm typecheck && pnpm test     # 86 passed / 2 skipped 기대
 git log --oneline -3            # HEAD가 f20e1dd 인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
@@ -156,10 +167,11 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 | 작업 | 왜/착수 지점 | 난이도 |
 |---|---|---|
 | **스캔 비동기화(큐)** | OSV 호출이 동기라 대용량·장시간 스캔에 약함. `POST /v1/scans/*`가 `jobId`를 반환하고 상태 폴링/조회 엔드포인트 추가. 코어(서비스 계층)에 잡 상태 모델 필요 → `schema`에 영향 가능성 검토부터. | 높음 |
-| **인증 고도화** | env 토큰 → 토큰 DB 또는 OIDC. `apps/api/src/auth.ts`의 `AuthProvider`가 교체 지점(인터페이스는 이미 분리됨). DB 토큰부터 점진 도입 권장. | 중간 |
+| **인증: 발급/폐기 API + OIDC** | DB 토큰은 완료(D8). 남은 것: 토큰 발급/폐기 엔드포인트(admin 전용, 발급 시 원문 1회 노출 후 해시만 저장 — `TokenStore.upsertToken/deleteToken` 이미 존재), OIDC/IdP 연동. | 중간 |
+| ~~인증 DB 토큰화~~ | **완료**. `TokenStore` 포트 + `DbAuthProvider`(sha256 해시), `002_api_token.sql`. | — |
 | ~~GitHub 연결 + CI 가동~~ | **완료**(2026-06-02). remote `pangkim-mz/AIO-TF` 연결, push 트리거로 CI 가동. Node 22·pnpm 11 호환 수정 후 첫 통과(`f20e1dd`). | — |
 
-**권장 순서**: ~~GitHub 연결~~(완료) → **인증 고도화**(상용 필수, 착수 지점 명확) → 큐(가장 큰 구조 변경).
+**권장 순서**: ~~GitHub 연결~~(완료) → ~~인증 DB 토큰화~~(완료) → 큐(가장 큰 구조 변경) 또는 토큰 발급 API.
 
 **4) 작업 규칙**: §4를 따른다. 새 도메인/기능이라면 코어 0줄 원칙을 먼저 점검하고,
 순수 로직은 `lib`/패키지로 분리해 단위 테스트. 끝나면 README·CLAUDE.md·이 문서·메모리를 갱신.
@@ -171,4 +183,4 @@ pnpm web:dev      # 대시보드 → /services 에서 서비스 통합 리스크
 - `yarn.lock` 미지원(npm/pnpm lockfile만). 없으면 의존성 레인지 근사치로 폴백.
 - OSV의 CVSS 숫자 점수 파싱 미구현(현재 GHSA 텍스트 심각도만 매핑).
 - 스캔/보강이 동기(큐 없음) — 대용량·장시간 입력에 부적합.
-- 인증이 env 토큰 수준(토큰 DB/IdP 미도입).
+- 토큰 발급/폐기 API와 OIDC 미도입(현재 DB 토큰은 시작 시 `OMNIGUARD_TOKENS` 시딩으로 주입).

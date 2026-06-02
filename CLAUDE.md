@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 79 passed / 1 skipped(Postgres)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 86 passed / 2 skipped(Postgres 계약 2건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -57,6 +57,9 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 ## API 규약
 
 - 인증: `Authorization: Bearer <token>` → `AuthProvider`가 테넌트/역할 해석(`apps/api/src/auth.ts`).
+  `DATABASE_URL` 있으면 `DbAuthProvider`(토큰 DB `api_token`, sha256 해시 저장, 시작 시 `OMNIGUARD_TOKENS` 시딩),
+  없으면 `InMemoryAuthProvider`. 토큰 영속화는 `packages/storage`의 `TokenStore` 포트(InMemory·Postgres).
+  `api_token`은 인증이 테넌트 컨텍스트보다 먼저라 **RLS 비대상**(control-plane).
 - RBAC: 읽기=인증된 전 역할, 쓰기(스캔)=`admin`/`analyst`.
 - 응답 포맷 고정(`apps/api/src/envelope.ts`): 성공 `{ok:true,data}` / 실패 `{ok:false,error:{code,message}}`.
   code=디버깅용, message=사용자용. 내부 오류 상세는 비노출.
@@ -82,10 +85,11 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 ## 다음 단계 (로드맵 [예정])
 
 1. **스캔 비동기화(큐)** — 현재 OSV/스캔이 동기. POST가 jobId 반환 + 상태 폴링/조회 엔드포인트. 코어 아키텍처 변경 수반.
-2. **인증 고도화** — env 토큰 → 토큰 DB 또는 OIDC. 범위 큼/설계 결정 많음.
+2. **인증 고도화 잔여** — DB 토큰은 완료. 남은 것: 토큰 발급/폐기 API(엔드포인트, `TokenStore.deleteToken` 이미 존재), OIDC/IdP 연동.
 
 완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
-대시보드 서비스 뷰(`/services` + `lib/services.ts`).
+대시보드 서비스 뷰(`/services` + `lib/services.ts`),
+**인증 DB 토큰화**(`TokenStore` 포트 + `DbAuthProvider`, sha256 해시, `002_api_token.sql`).
 
 ### 알려진 한계
 
