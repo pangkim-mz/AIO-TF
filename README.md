@@ -13,6 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/connector-npm` | package.json 스캐너 → 자산 추출 (lockfile로 정확한 버전 해석) |
 | `packages/enrich-osv` | OSV.dev API로 CVE 매칭 (타임아웃·재시도·동시성 제한) |
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
+| `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
 | `apps/cli` | 수직 슬라이스 오케스트레이터 |
 
 ## 사용법
@@ -27,9 +28,27 @@ pnpm test
 pnpm typecheck
 
 # 실제 스캔 (OSV API 호출, 네트워크 필요)
+# DATABASE_URL 미설정 시 인메모리에 영속화
 pnpm scan <path/to/package.json>
 pnpm scan <path/to/package.json> --json
+
+# Postgres에 영속화 (마이그레이션 자동 적용)
+$env:DATABASE_URL = "postgres://user:pass@localhost:5432/omniguard"; pnpm scan <path/to/package.json>
 ```
+
+## 영속화 (멀티테넌트)
+
+`packages/storage`는 포트/어댑터 패턴이다. `Repository` 인터페이스 하나에
+두 어댑터(`InMemoryRepository`, `PostgresRepository`)가 동일한 계약을 만족한다.
+
+- **테넌트 격리**: 코드 레벨 필터 + Postgres **RLS**(`FORCE ROW LEVEL SECURITY`,
+  세션 변수 `omniguard.tenant_id`) 이중 방어. 운영에서는 비-슈퍼유저 역할로 접속해야
+  RLS가 강제된다(슈퍼유저는 RLS 우회).
+- **멱등 upsert**: 자연키 기준(asset=purl, finding=assetId+sourceFindingId,
+  score=findingId). 재스캔해도 중복 없이 `id`/`firstSeen`을 보존한다.
+- **계약 테스트**: 동일 테스트를 두 어댑터에 적용. Postgres는 `DATABASE_URL`이 있을 때만 실행.
+
+마이그레이션: `packages/storage/migrations/001_init.sql`.
 
 ## 설계 원칙
 

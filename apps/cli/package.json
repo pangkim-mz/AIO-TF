@@ -7,6 +7,7 @@
     "@omniguard/connector-npm": "workspace:*",
     "@omniguard/enrich-osv": "workspace:*",
     "@omniguard/schema": "workspace:*",
-    "@omniguard/scoring": "workspace:*"
+    "@omniguard/scoring": "workspace:*",
+    "@omniguard/storage": "workspace:*"
   }
 }
