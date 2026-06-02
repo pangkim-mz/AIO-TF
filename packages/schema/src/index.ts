@@ -50,10 +50,16 @@ const CloudResourceAttrs = z.object({
   region: z.string().nullable(),
 });
 
+const ServiceAttrs = z.object({
+  type: z.literal("service"),
+  key: z.string(), // 자연키: 서비스 슬러그 (예: checkout-api)
+});
+
 export const AssetAttributes = z.discriminatedUnion("type", [
   SoftwareComponentAttrs,
   VendorAttrs,
   CloudResourceAttrs,
+  ServiceAttrs,
 ]);
 export type AssetAttributes = z.infer<typeof AssetAttributes>;
 

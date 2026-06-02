@@ -6,6 +6,7 @@
   "dependencies": {
     "@omniguard/connector-iac": "workspace:*",
     "@omniguard/connector-npm": "workspace:*",
+    "@omniguard/connector-service": "workspace:*",
     "@omniguard/connector-vendor": "workspace:*",
     "@omniguard/enrich-osv": "workspace:*",
     "@omniguard/graph": "workspace:*",

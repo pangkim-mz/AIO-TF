@@ -29,6 +29,9 @@ importers:
       '@omniguard/connector-npm':
         specifier: workspace:*
         version: link:../../packages/connector-npm
+      '@omniguard/connector-service':
+        specifier: workspace:*
+        version: link:../../packages/connector-service
       '@omniguard/connector-vendor':
         specifier: workspace:*
         version: link:../../packages/connector-vendor
@@ -62,6 +65,9 @@ importers:
       '@omniguard/connector-npm':
         specifier: workspace:*
         version: link:../../packages/connector-npm
+      '@omniguard/connector-service':
+        specifier: workspace:*
+        version: link:../../packages/connector-service
       '@omniguard/connector-vendor':
         specifier: workspace:*
         version: link:../../packages/connector-vendor
@@ -113,6 +119,18 @@ importers:
         version: 3.25.76
 
   packages/connector-npm:
+    dependencies:
+      '@omniguard/schema':
+        specifier: workspace:*
+        version: link:../schema
+      yaml:
+        specifier: ^2.6.1
+        version: 2.9.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/connector-service:
     dependencies:
       '@omniguard/schema':
         specifier: workspace:*

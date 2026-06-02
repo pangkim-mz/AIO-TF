@@ -219,6 +219,43 @@ describe("OmniGuard API", () => {
     expect(findings.json().data[0].category).toBe("misconfiguration");
   });
 
+  it("서비스 토폴로지: SW/IaC/벤더 리스크를 서비스 단위로 통합한다", async () => {
+    const a = makeApp(stubEnrich);
+    const h = auth("admin-token");
+
+    // 1) npm: lodash에 CRITICAL (스텁) → 점수 82
+    await a.inject({ method: "POST", url: "/v1/scans/npm", headers: h, payload: { packageJson: PKG_JSON } });
+    // 2) iac: 공개 S3 (HIGH)
+    const plan = JSON.stringify({
+      planned_values: { root_module: { resources: [
+        { address: "aws_s3_bucket.x", type: "aws_s3_bucket", name: "x", values: { acl: "public-read" } },
+      ] } },
+    });
+    await a.inject({ method: "POST", url: "/v1/scans/iac", headers: h, payload: { plan } });
+    // 3) vendor: Acme SOC2 누락 (HIGH)
+    await a.inject({ method: "POST", url: "/v1/scans/vendor", headers: h, payload: { inventory: VENDOR_YAML } });
+
+    // 4) service: 세 도메인 자산에 연결
+    const manifest = [
+      "services:",
+      "  - name: Checkout API",
+      "    key: checkout-api",
+      "    dependsOn: [lodash]",
+      "    hostedOn: [aws_s3_bucket.x]",
+      "    providedBy: [acme.com]",
+    ].join("\n");
+    const svc = await a.inject({ method: "POST", url: "/v1/scans/service", headers: h, payload: { manifest } });
+    expect(svc.statusCode).toBe(201);
+    expect(svc.json().data).toMatchObject({ serviceCount: 1, edgeCount: 3, unresolved: [] });
+
+    // 5) 영향도: 서비스가 최악 도메인(lodash, 82)을 통합 상속
+    const impact = await a.inject({ method: "GET", url: "/v1/impact", headers: h });
+    const row = impact.json().data.find((r: { asset: string }) => r.asset === "Checkout API");
+    expect(row.inherited).toBe(true);
+    expect(row.impactScore).toBe(82);
+    expect(row.rootCause).toBe("lodash");
+  });
+
   it("npm 스캔 본문 누락은 400", async () => {
     const res = await app.inject({
       method: "POST",

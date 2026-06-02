@@ -3,6 +3,7 @@ import {
   type IacScanInput,
   type NpmScanInput,
   type ScanSummary,
+  type ServiceSummary,
 } from "./api";
 
 /** 폼 제출 결과 상태 (useFormState용). */
@@ -17,6 +18,7 @@ export const initialScanState: ScanState = { status: "idle" };
 type NpmScanner = { scanNpm(input: NpmScanInput): Promise<ScanSummary> };
 type VendorScanner = { scanVendor(inventory: string): Promise<ScanSummary> };
 type IacScanner = { scanIac(input: IacScanInput): Promise<ScanSummary> };
+type ServiceScanner = { scanService(manifest: string): Promise<ServiceSummary> };
 
 function toErrorState(error: unknown): ScanState {
   if (error instanceof ApiClientError) {
@@ -72,6 +74,25 @@ export async function performIacScan(
       stackName: stackName?.trim() || undefined,
     });
     return { status: "success", summary };
+  } catch (error) {
+    return toErrorState(error);
+  }
+}
+
+export async function performServiceScan(
+  client: ServiceScanner,
+  manifest: string,
+): Promise<ScanState> {
+  if (manifest.trim() === "") {
+    return { status: "error", message: "서비스 매니페스트를 입력하세요." };
+  }
+  try {
+    const s = await client.scanService(manifest);
+    const note = s.unresolved.length ? ` (미해결 ${s.unresolved.length}건)` : "";
+    return {
+      status: "success",
+      message: `서비스 ${s.serviceCount}개 · 교차 엣지 ${s.edgeCount}개 연결${note}`,
+    };
   } catch (error) {
     return toErrorState(error);
   }

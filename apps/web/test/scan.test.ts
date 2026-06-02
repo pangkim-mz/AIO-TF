@@ -1,6 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
 import { ApiClientError } from "../lib/api";
-import { performIacScan, performNpmScan, performVendorScan } from "../lib/scan";
+import {
+  performIacScan,
+  performNpmScan,
+  performServiceScan,
+  performVendorScan,
+} from "../lib/scan";
 
 describe("performNpmScan", () => {
   it("빈 입력은 호출 없이 에러 상태", async () => {
@@ -78,5 +83,32 @@ describe("performIacScan", () => {
     const state = await performIacScan(client, "   ");
     expect(state.status).toBe("error");
     expect(client.scanIac).not.toHaveBeenCalled();
+  });
+});
+
+describe("performServiceScan", () => {
+  it("성공 시 연결 요약 메시지를 담은 success 상태", async () => {
+    const client = {
+      scanService: vi.fn(async () => ({
+        serviceCount: 1,
+        edgeCount: 3,
+        unresolved: [],
+      })),
+    };
+    const state = await performServiceScan(client, "services: []");
+    expect(state.status).toBe("success");
+    expect(state.message).toContain("교차 엣지 3개");
+  });
+
+  it("미해결 참조가 있으면 메시지에 표기", async () => {
+    const client = {
+      scanService: vi.fn(async () => ({
+        serviceCount: 1,
+        edgeCount: 1,
+        unresolved: ["x"],
+      })),
+    };
+    const state = await performServiceScan(client, "services: []");
+    expect(state.message).toContain("미해결 1건");
   });
 });

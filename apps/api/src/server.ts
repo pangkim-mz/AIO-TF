@@ -14,6 +14,10 @@ import {
 } from "@omniguard/connector-vendor";
 import { scanPackageContent } from "@omniguard/connector-npm";
 import { evaluateIac, scanTerraformPlanContent } from "@omniguard/connector-iac";
+import {
+  buildTopology,
+  parseServiceManifestContent,
+} from "@omniguard/connector-service";
 import { enrichWithOsv } from "@omniguard/enrich-osv";
 import type { Repository } from "@omniguard/storage";
 import { ApiError, sendError, sendOk } from "./envelope";
@@ -51,6 +55,10 @@ const ScanNpmBody = z.object({
 const ScanIacBody = z.object({
   plan: z.string().min(1), // terraform show -json 출력
   stackName: z.string().optional(),
+});
+
+const ScanServiceBody = z.object({
+  manifest: z.string().min(1), // 서비스 매니페스트(YAML/JSON)
 });
 
 function bearerToken(request: FastifyRequest): string | null {
@@ -155,6 +163,14 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       requireWrite(principal);
       const { plan, stackName } = ScanIacBody.parse(request.body);
       const summary = await runIacScan(deps.repo, principal.tenantId, plan, stackName);
+      sendOk(reply, summary, 201);
+    });
+
+    api.post("/v1/scans/service", async (request, reply) => {
+      const principal = principalOf(request);
+      requireWrite(principal);
+      const { manifest } = ScanServiceBody.parse(request.body);
+      const summary = await runServiceScan(deps.repo, principal.tenantId, manifest);
       sendOk(reply, summary, 201);
     });
   });
@@ -271,6 +287,33 @@ async function runIacScan(
     relationshipCount: relationships.length,
     findingCount: findings.length,
     topScore,
+  };
+}
+
+interface ServiceSummary {
+  serviceCount: number;
+  edgeCount: number;
+  unresolved: string[];
+}
+
+/** 서비스 매니페스트를 기존 자산에 연결한다(도메인 간 그래프). 발견은 생성하지 않는다. */
+async function runServiceScan(
+  repo: Repository,
+  tenantId: string,
+  manifest: string,
+): Promise<ServiceSummary> {
+  const entries = parseServiceManifestContent(manifest);
+  const existing = await repo.listAssets(tenantId);
+  const topo = buildTopology(entries, existing, tenantId);
+  // persistScan: service 자산 id만 재매핑(엣지 to측은 이미 영속화된 기존 자산 id)
+  const { assets, relationships } = await persistScan(repo, tenantId, {
+    assets: topo.assets,
+    relationships: topo.relationships,
+  });
+  return {
+    serviceCount: assets.length,
+    edgeCount: relationships.length,
+    unresolved: topo.unresolved,
   };
 }
 

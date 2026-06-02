@@ -23,13 +23,13 @@ function ScanResult({ state }: { state: ScanState }): ReactNode {
       </p>
     );
   }
-  if (state.status === "success" && state.summary) {
-    const s = state.summary;
+  if (state.status === "success") {
+    const text = state.summary
+      ? `완료: 자산 ${state.summary.assetCount} · 관계 ${state.summary.relationshipCount} · 발견 ${state.summary.findingCount} · 최고점수 ${state.summary.topScore}.`
+      : (state.message ?? "완료.");
     return (
       <p role="status" className="notice">
-        완료: 자산 {s.assetCount} · 관계 {s.relationshipCount} · 발견{" "}
-        {s.findingCount} · 최고점수 {s.topScore}.{" "}
-        <a href="/">대시보드 보기 →</a>
+        {text} <a href="/">대시보드 보기 →</a>
       </p>
     );
   }
@@ -75,6 +75,27 @@ export function IacScanForm({ action }: { action: ScanAction }): ReactNode {
         placeholder='{ "planned_values": { "root_module": { "resources": [ ... ] } } }'
       />
       <SubmitButton label="IaC 스캔" />
+      <ScanResult state={state} />
+    </form>
+  );
+}
+
+export function ServiceScanForm({ action }: { action: ScanAction }): ReactNode {
+  const [state, formAction] = useFormState(action, initialScanState);
+  return (
+    <form action={formAction} className="scan-form">
+      <label htmlFor="svc-manifest">
+        서비스 매니페스트 (기존 자산을 패키지/클라우드/벤더에 연결)
+      </label>
+      <textarea
+        id="svc-manifest"
+        name="manifest"
+        rows={12}
+        placeholder={
+          "services:\n  - name: Checkout API\n    key: checkout-api\n    dependsOn: [pkg:npm/lodash@4.17.21]\n    hostedOn: [aws_db_instance.main]\n    providedBy: [acme.com]"
+        }
+      />
+      <SubmitButton label="서비스 토폴로지 연결" />
       <ScanResult state={state} />
     </form>
   );

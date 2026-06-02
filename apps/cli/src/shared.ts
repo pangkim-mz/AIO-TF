@@ -107,6 +107,21 @@ function ownScoreByAsset(
   return own;
 }
 
+/** 저장소의 전체 그래프(모든 자산·관계·발견·점수)에 대해 영향도를 출력한다. */
+export async function printPersistedImpact(
+  repo: Repository,
+  tenantId: string,
+): Promise<void> {
+  const [assets, findings, scores, relationships] = await Promise.all([
+    repo.listAssets(tenantId),
+    repo.listFindings(tenantId),
+    repo.listScores(tenantId),
+    repo.listRelationships(tenantId),
+  ]);
+  const scoreByFinding = new Map(scores.map((s) => [s.findingId, s]));
+  printImpact(assets, relationships, findings, scoreByFinding);
+}
+
 function printImpact(
   assets: readonly Asset[],
   relationships: readonly AssetRelationship[],

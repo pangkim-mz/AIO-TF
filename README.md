@@ -13,6 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/connector-npm` | package.json 스캐너 → 자산 추출 (lockfile로 정확한 버전 해석) |
 | `packages/connector-vendor` | 벤더 인벤토리(YAML/JSON) → 자산 + 규칙 기반 컴플라이언스 평가 |
 | `packages/connector-iac` | Terraform plan JSON → 클라우드 자산 + 미설정 규칙 평가 |
+| `packages/connector-service` | 서비스 매니페스트 → 서비스 자산 + 도메인 간 엣지(통합 리스크) |
 | `packages/enrich-osv` | OSV.dev API로 CVE 매칭 (타임아웃·재시도·동시성 제한) |
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
 | `packages/graph` | 자산 그래프 위험 전파 (순환 안전, 영향도 산정) |
@@ -46,6 +47,9 @@ pnpm scan:vendor <path/to/vendors.yaml> --json
 
 # 클라우드/인프라 스캔 (Terraform plan JSON: terraform show -json plan.out > plan.json)
 pnpm scan:iac <path/to/plan.json>
+
+# 서비스 토폴로지 연결 (도메인 간) — 영속화된 자산 대상이라 DATABASE_URL 권장
+$env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service <path/to/services.yaml>
 ```
 
 ## 영속화 (멀티테넌트)
@@ -95,6 +99,7 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 | POST | `/v1/scans/vendor` | admin/analyst | 인벤토리 텍스트 스캔·영속화 |
 | POST | `/v1/scans/npm` | admin/analyst | package.json(+lockfile) 본문 스캔·OSV 보강·영속화 |
 | POST | `/v1/scans/iac` | admin/analyst | Terraform plan JSON 본문 스캔·미설정 평가·영속화 |
+| POST | `/v1/scans/service` | admin/analyst | 서비스 매니페스트 → 기존 자산에 도메인 간 엣지 연결 |
 
 `/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`.
 lockfile 제공 시 정확한 버전, 없으면 레인지 근사치. (OSV 호출은 현재 동기 — 운영에서는 큐/비동기 권장.)
@@ -119,6 +124,9 @@ pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으
 - 정규화 스키마 하나로 세 도메인(SW 공급망/벤더/클라우드)을 흡수 → 파이프라인은 도메인 무관.
   세 도메인 모두 schema/scoring/graph/storage **변경 없이** 추가됨(입력 파싱 + 규칙만 신규) — 스키마 범용성 검증 완료.
   IaC는 `contains` 엣지(스택→리소스)로 그래프에 연결되어 스택이 리소스 리스크를 상속한다.
+- **도메인 간 통합**: `service` 자산이 `depends_on`(→패키지)·`hosted_on`(→클라우드)·`provided_by`(→벤더)
+  엣지로 세 도메인을 가로질러 연결된다. 서비스의 영향도 점수는 모든 도메인 리스크의 통합값 —
+  OmniGuard의 최종 목적인 "한 서비스의 통합 리스크"가 그래프 전파로 자연히 계산된다.
 - 점수는 **결정론적**이고 `scoringVersion`으로 버전 관리(재현성). AI는 점수 *해석*만 담당.
 - 외부 입력(OSV 응답, package.json)은 zod로 런타임 검증.
 

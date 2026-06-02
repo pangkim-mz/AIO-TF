@@ -1,6 +1,16 @@
 import type { ReactNode } from "react";
-import { IacScanForm, NpmScanForm, VendorScanForm } from "./forms";
-import { scanIacAction, scanNpmAction, scanVendorAction } from "./actions";
+import {
+  IacScanForm,
+  NpmScanForm,
+  ServiceScanForm,
+  VendorScanForm,
+} from "./forms";
+import {
+  scanIacAction,
+  scanNpmAction,
+  scanServiceAction,
+  scanVendorAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +34,14 @@ export default function ScanPage(): ReactNode {
         <section>
           <h2>클라우드 / 인프라 (IaC)</h2>
           <IacScanForm action={scanIacAction} />
+        </section>
+        <section>
+          <h2>서비스 토폴로지 (도메인 간 연결)</h2>
+          <p className="muted">
+            먼저 위 도메인들을 스캔해 자산을 만든 뒤, 서비스를 그 자산들에
+            연결하세요. 서비스 영향도는 영향도 페이지에서 확인합니다.
+          </p>
+          <ServiceScanForm action={scanServiceAction} />
         </section>
       </div>
     </>

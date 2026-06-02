@@ -22,6 +22,12 @@ export interface ScanSummary {
   topScore: number;
 }
 
+export interface ServiceSummary {
+  serviceCount: number;
+  edgeCount: number;
+  unresolved: string[];
+}
+
 export interface NpmScanInput {
   packageJson: string;
   lockfile?: string;
@@ -114,6 +120,12 @@ export class ApiClient {
     return this.request<ScanSummary>("/v1/scans/iac", {
       method: "POST",
       body: JSON.stringify(input),
+    });
+  }
+  scanService(manifest: string): Promise<ServiceSummary> {
+    return this.request<ServiceSummary>("/v1/scans/service", {
+      method: "POST",
+      body: JSON.stringify({ manifest }),
     });
   }
 }

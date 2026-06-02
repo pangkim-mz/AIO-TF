@@ -13,6 +13,7 @@
     "scan": "tsx apps/cli/src/index.ts",
     "scan:vendor": "tsx apps/cli/src/vendor.ts",
     "scan:iac": "tsx apps/cli/src/iac.ts",
+    "scan:service": "tsx apps/cli/src/service.ts",
     "serve": "tsx apps/api/src/index.ts",
     "web:dev": "pnpm --filter @omniguard/web dev",
     "web:build": "pnpm --filter @omniguard/web build"

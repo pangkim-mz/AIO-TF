@@ -6,6 +6,7 @@ import {
   type ScanState,
   performIacScan,
   performNpmScan,
+  performServiceScan,
   performVendorScan,
 } from "../../lib/scan";
 
@@ -51,6 +52,18 @@ export async function scanIacAction(
     serverClient(),
     field(formData, "plan"),
     field(formData, "stackName") || undefined,
+  );
+  if (state.status === "success") revalidateViews();
+  return state;
+}
+
+export async function scanServiceAction(
+  _prev: ScanState,
+  formData: FormData,
+): Promise<ScanState> {
+  const state = await performServiceScan(
+    serverClient(),
+    field(formData, "manifest"),
   );
   if (state.status === "success") revalidateViews();
   return state;

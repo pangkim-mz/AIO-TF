@@ -43,5 +43,7 @@ export function assetIdentifier(asset: Asset): string {
       return asset.attributes.domain;
     case "cloud_resource":
       return asset.attributes.resourceId;
+    case "service":
+      return asset.attributes.key;
   }
 }
