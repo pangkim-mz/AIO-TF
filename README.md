@@ -2,8 +2,10 @@
 
 AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 
-상용 SaaS 목표. 현재는 **SW 공급망 수직 슬라이스**(MVP)를 구현 중입니다:
-`package.json → 자산 추출 → OSV 취약점 조회 → 결정론적 리스크 점수`.
+상용 SaaS 목표. 하나의 정규화 스키마로 **SW 공급망 · 벤더/서드파티 · 클라우드(IaC)** 세 도메인을
+흡수하고, 그래프 전파로 **서비스 단위 통합 리스크**를 계산한다. 기본 파이프라인:
+`입력 파싱 → 자산/발견 추출 → (OSV 등) 보강 → 결정론적 리스크 점수 → 그래프 영향도 전파 → 영속화`.
+CLI · HTTP API(Fastify) · 대시보드(Next.js) 세 가지 진입점을 제공한다.
 
 ## 구조 (pnpm 모노레포)
 
@@ -18,7 +20,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
 | `packages/graph` | 자산 그래프 위험 전파 (순환 안전, 영향도 산정) |
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
-| `apps/cli` | 수직 슬라이스 오케스트레이터 (`scan`, `scan:vendor`) |
+| `apps/cli` | 오케스트레이터 (`scan` · `scan:vendor` · `scan:iac` · `scan:service`) |
 | `apps/api` | HTTP API (Fastify): 토큰 인증·테넌트 라우팅·RBAC·일관 응답 포맷 |
 | `apps/web` | 대시보드 (Next.js App Router): 자산·발견·영향도 시각화 |
 
