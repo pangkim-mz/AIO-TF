@@ -29,14 +29,26 @@ export interface VendorScan {
   entries: VendorEntry[];
 }
 
+/** YAML/JSON 인벤토리 텍스트를 파싱·검증한다. (YAML 파서가 JSON도 처리) */
+export function parseVendorInventoryContent(content: string): VendorEntry[] {
+  const data: unknown = parseYaml(content);
+  return VendorInventory.parse(data).vendors;
+}
+
 /** YAML 또는 JSON 인벤토리 파일을 파싱·검증한다. */
 export async function parseVendorInventory(
   filePath: string,
 ): Promise<VendorEntry[]> {
-  const raw = await readFile(filePath, "utf8");
-  // YAML 파서는 JSON도 처리하므로 확장자 분기 불필요
-  const data: unknown = parseYaml(raw);
-  return VendorInventory.parse(data).vendors;
+  return parseVendorInventoryContent(await readFile(filePath, "utf8"));
+}
+
+/** 인벤토리 텍스트를 직접 받아 자산과 원본 엔트리를 반환한다 (API용). */
+export function scanVendorInventoryContent(
+  content: string,
+  tenantId: string,
+): VendorScan {
+  const entries = parseVendorInventoryContent(content);
+  return { assets: toAssets(entries, tenantId), entries };
 }
 
 /** 인벤토리 엔트리를 공통 Asset(vendor 변형)으로 매핑한다. */

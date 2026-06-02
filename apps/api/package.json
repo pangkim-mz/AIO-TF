@@ -1,0 +1,15 @@
+{
+  "name": "@omniguard/api",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@omniguard/connector-vendor": "workspace:*",
+    "@omniguard/graph": "workspace:*",
+    "@omniguard/schema": "workspace:*",
+    "@omniguard/scoring": "workspace:*",
+    "@omniguard/storage": "workspace:*",
+    "fastify": "^5.1.0",
+    "zod": "^3.24.1"
+  }
+}

@@ -16,7 +16,8 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
 | `packages/graph` | 자산 그래프 위험 전파 (순환 안전, 영향도 산정) |
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
-| `apps/cli` | 수직 슬라이스 오케스트레이터 |
+| `apps/cli` | 수직 슬라이스 오케스트레이터 (`scan`, `scan:vendor`) |
+| `apps/api` | HTTP API (Fastify): 토큰 인증·테넌트 라우팅·RBAC·일관 응답 포맷 |
 
 ## 사용법
 
@@ -65,6 +66,28 @@ pnpm scan:vendor <path/to/vendors.yaml> --json
 - npm 커넥터는 루트 애플리케이션 자산 + 각 의존성에 대한 `depends_on` 엣지를 생성한다.
 - 자체 취약점이 없는 애플리케이션도 의존성의 리스크를 상속받아 영향도 우선순위에 노출된다.
 - 순환 참조는 안전하게 차단된다. CLI(`pnpm scan`)는 점수 테이블 뒤에 "영향도 전파" 섹션을 출력한다.
+
+## HTTP API (`apps/api`)
+
+Fastify 기반. 토큰 → 주체(테넌트 + 역할) 해석으로 멀티테넌트 라우팅을 수행한다.
+
+```bash
+pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev-token"(admin) 발급
+```
+
+- **인증**: `Authorization: Bearer <token>` → `AuthProvider`가 테넌트/역할 해석. 토큰은
+  `OMNIGUARD_TOKENS`(JSON) 또는 추후 DB/IdP로 교체.
+- **인가(RBAC)**: 읽기는 인증된 모든 역할, 쓰기(스캔)는 `admin`/`analyst`만.
+- **일관 응답 포맷**: 성공 `{ ok: true, data }` / 실패 `{ ok: false, error: { code, message } }`
+  (code=디버깅용, message=사용자용, 내부 오류는 비노출).
+- **테넌트 격리**: 모든 조회/쓰기는 토큰의 테넌트로 스코프(+ Postgres RLS).
+
+| 메서드 | 경로 | 권한 | 설명 |
+|---|---|---|---|
+| GET | `/health` | 공개 | 헬스 체크 |
+| GET | `/v1/assets` `/findings` `/scores` `/relationships` | 인증 | 테넌트 데이터 조회 |
+| GET | `/v1/impact` | 인증 | 그래프 영향도 전파 결과 |
+| POST | `/v1/scans/vendor` | admin/analyst | 인벤토리 텍스트 스캔·영속화 |
 
 ## 설계 원칙
 
