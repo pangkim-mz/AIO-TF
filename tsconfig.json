@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@omniguard/schema": ["packages/schema/src/index.ts"],
+      "@omniguard/connector-npm": ["packages/connector-npm/src/index.ts"],
+      "@omniguard/enrich-osv": ["packages/enrich-osv/src/index.ts"],
+      "@omniguard/scoring": ["packages/scoring/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/test", "apps/*/src"]
+}
