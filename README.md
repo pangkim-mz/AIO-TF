@@ -68,7 +68,8 @@ $env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service
   score=findingId). 재스캔해도 중복 없이 `id`/`firstSeen`을 보존한다.
 - **계약 테스트**: 동일 테스트를 두 어댑터에 적용. Postgres는 `DATABASE_URL`이 있을 때만 실행.
 
-마이그레이션: `packages/storage/migrations/001_init.sql`.
+마이그레이션: `packages/storage/migrations/*.sql`(001 코어 · 002 인증 토큰 · 003 작업 큐).
+파일명 순으로 자동 적용되며, `applyMigrations`는 advisory lock으로 동시 실행을 직렬화한다(다중 인스턴스 부팅 안전).
 
 ## 영향도 전파 (Asset Graph)
 
