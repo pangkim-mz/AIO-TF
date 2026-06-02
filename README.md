@@ -7,6 +7,8 @@ AI 기반 인프라/공급망 리스크 통합 관제 시스템.
 `입력 파싱 → 자산/발견 추출 → (OSV 등) 보강 → 결정론적 리스크 점수 → 그래프 영향도 전파 → 영속화`.
 CLI · HTTP API(Fastify) · 대시보드(Next.js) 세 가지 진입점을 제공한다.
 
+> 설계 근거와 진행 경위, 다음 세션 이어가기 가이드는 [`docs/PROJECT_NOTES.md`](docs/PROJECT_NOTES.md) 참고.
+
 ## 구조 (pnpm 모노레포)
 
 | 패키지 | 역할 |
