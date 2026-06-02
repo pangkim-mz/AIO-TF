@@ -34,6 +34,7 @@ describe("ApiClient", () => {
     expect((init.headers as Record<string, string>).authorization).toBe(
       "Bearer t",
     );
+    expect(init.cache).toBe("no-store"); // 관제 대시보드는 항상 라이브 읽기
   });
 
   it("ok=false면 ApiClientError를 던진다", async () => {

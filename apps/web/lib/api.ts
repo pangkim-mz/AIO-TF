@@ -101,6 +101,9 @@ export class ApiClient {
 
   private async request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      // 관제 대시보드는 항상 최신 상태를 보여야 한다(Next fetch 캐시 비활성).
+      // 외부(CLI/API/타 사용자) 변경도 즉시 반영되도록 reads를 라이브로 둔다.
+      cache: "no-store",
       ...init,
       headers: {
         authorization: `Bearer ${this.token}`,
