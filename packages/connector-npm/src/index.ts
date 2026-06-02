@@ -1,6 +1,10 @@
 import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { z } from "zod";
 import { type Asset, newId, now } from "@omniguard/schema";
+import { resolveInstalledVersions, type VersionSource } from "./lockfile";
+
+export { resolveInstalledVersions, type VersionSource } from "./lockfile";
 
 const SOURCE_ID = "connector-npm";
 const ECOSYSTEM = "npm";
@@ -17,10 +21,9 @@ const PackageJson = z
 
 type DependencyScope = "prod" | "dev" | "optional";
 
-interface ParsedDependency {
+interface DeclaredDependency {
   name: string;
   range: string;
-  version: string;
   scope: DependencyScope;
 }
 
@@ -39,48 +42,55 @@ export function cleanVersion(range: string): string | null {
 function collect(
   record: Record<string, string> | undefined,
   scope: DependencyScope,
-): ParsedDependency[] {
+): DeclaredDependency[] {
   if (!record) return [];
-  const result: ParsedDependency[] = [];
-  for (const [name, range] of Object.entries(record)) {
-    const version = cleanVersion(range);
-    if (version === null) continue; // git/file/workspace 등 비-semver 의존성은 건너뜀
-    result.push({ name, range, version, scope });
-  }
-  return result;
+  return Object.entries(record).map(([name, range]) => ({ name, range, scope }));
 }
 
-/** package.json 경로를 읽어 software_component 자산 목록을 생성한다. */
+/**
+ * package.json 경로를 읽어 software_component 자산 목록을 생성한다.
+ * 버전은 lockfile의 정확한 설치 버전을 우선 사용하고, 없으면 레인지 근사치로 폴백한다.
+ */
 export async function scanPackageJson(
   filePath: string,
   tenantId: string,
 ): Promise<Asset[]> {
   const raw = await readFile(filePath, "utf8");
   const pkg = PackageJson.parse(JSON.parse(raw));
+  const installed = await resolveInstalledVersions(dirname(filePath));
 
-  const deps: ParsedDependency[] = [
+  const deps: DeclaredDependency[] = [
     ...collect(pkg.dependencies, "prod"),
     ...collect(pkg.devDependencies, "dev"),
     ...collect(pkg.optionalDependencies, "optional"),
   ];
 
   const timestamp = now();
-  return deps.map((dep) => ({
-    id: newId(),
-    tenantId,
-    firstSeen: timestamp,
-    lastSeen: timestamp,
-    sourceIds: [SOURCE_ID],
-    name: dep.name,
-    criticality: "MEDIUM",
-    owner: null,
-    tags: { scope: dep.scope, range: dep.range },
-    attributes: {
-      type: "software_component",
-      purl: `pkg:${ECOSYSTEM}/${dep.name}@${dep.version}`,
-      ecosystem: ECOSYSTEM,
-      version: dep.version,
-      licenses: [],
-    },
-  }));
+  const assets: Asset[] = [];
+  for (const dep of deps) {
+    const locked = installed.get(dep.name);
+    const version = locked ?? cleanVersion(dep.range);
+    if (version === null) continue; // 버전을 특정할 수 없는 의존성은 건너뜀
+    const versionSource: VersionSource = locked ? "lockfile" : "range";
+
+    assets.push({
+      id: newId(),
+      tenantId,
+      firstSeen: timestamp,
+      lastSeen: timestamp,
+      sourceIds: [SOURCE_ID],
+      name: dep.name,
+      criticality: "MEDIUM",
+      owner: null,
+      tags: { scope: dep.scope, range: dep.range, versionSource },
+      attributes: {
+        type: "software_component",
+        purl: `pkg:${ECOSYSTEM}/${dep.name}@${version}`,
+        ecosystem: ECOSYSTEM,
+        version,
+        licenses: [],
+      },
+    });
+  }
+  return assets;
 }
