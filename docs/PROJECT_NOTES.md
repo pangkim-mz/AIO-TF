@@ -139,7 +139,7 @@
 - **새 도메인 추가**: 커넥터에 입력 파싱 + 규칙만 작성. 코어(`schema`/`scoring`/`graph`/`storage`)는
   변경하지 않는다. 이 불변식을 깨야 한다면 PR/커밋에 이유를 명시.
 - **테스트**: 기능과 함께 작성. 순수 로직은 프레임워크 무관 함수로 빼서 단위 테스트(예: `lib/format`, `lib/services`).
-  현재 **103 passed / 4 skipped**(Postgres 계약 4건은 `DATABASE_URL` 있을 때만).
+  현재 **111 passed / 4 skipped**(Postgres 계약 4건은 `DATABASE_URL` 있을 때만).
 - **커밋**: Conventional Commits, 한 커밋 한 변경, 커밋 전 `pnpm typecheck && pnpm test` 통과.
 - **CI**(`.github/workflows/ci.yml`): push/PR(main)에서 build-test(typecheck·test·web:build) +
   postgres(실제 DB로 계약 테스트). **단, git remote 미연결 → GitHub 연결 후 첫 push에 실행됨.**
@@ -171,6 +171,7 @@
 > 위 17~19는 PR #1(`78683c2`)로 main 머지. 이후 머지 후 CI/로컬 검증에서 두 건을 고쳤다:
 20. `e1f23b6` advisory lock으로 동시 마이그레이션 직렬화 — PR #1 머지 후 CI postgres job이 병렬 `CREATE TABLE IF NOT EXISTS` 충돌(`pg_type` 23505)로 실패한 것 수정. 운영 다중 인스턴스에도 동일 레이스라 실버그. 재현 테스트 추가. PR #2(`ac8a2f1`).
 21. `5bf0d31` 대시보드 reads `no-store` — 로컬 구동 중 Next fetch 디스크 캐시(`.next/cache`)로 스캔 후에도 빈 화면이 남던 것 수정. 관제 대시보드는 항상 라이브. PR #3(`353e998`).
+22. 토큰 발급/폐기 API — admin 전용 `POST`/`GET`/`DELETE /v1/tokens`. `TokenStore`에 `listByTenant` 추가(InMemory·Postgres + 계약 테스트). tenantId를 발급자 principal에서 가져와 타 테넌트 토큰 발급/조회/폐기 차단. 발급 시 원문 1회 노출 후 sha256 해시만 저장. index.ts를 양쪽 모드 모두 `DbAuthProvider`+`TokenStore`로 통일(무DB 모드도 발급 가능) — D8 확장.
 
 ---
 
@@ -184,8 +185,8 @@
 cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
-pnpm typecheck && pnpm test     # 103 passed / 4 skipped 기대
-git log --oneline -6            # HEAD가 353e998(PR #3 머지)인지
+pnpm typecheck && pnpm test     # 111 passed / 4 skipped 기대
+git log --oneline -6            # 토큰 발급 API 커밋이 HEAD인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
 > 현재 로컬 브랜치는 `main`만 있고 origin/main과 동기 상태(이전 작업 브랜치는 머지 후 삭제됨).
@@ -205,13 +206,14 @@ PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  #
 
 | 작업 | 왜/착수 지점 | 난이도 |
 |---|---|---|
-| **토큰 발급/폐기 API** | DB 토큰·OIDC 완료(D8). 남은 것: 토큰 발급/폐기 엔드포인트(admin 전용, 발급 시 원문 1회 노출 후 해시만 저장 — `TokenStore.upsertToken/deleteToken` 이미 존재). | 중간 |
 | **큐 고도화(선택)** | 자체 인프로세스 워커 완료(D9). 남은 것: 재시도/백오프, 데드레터, 별도 워커 프로세스 분리(`apps/worker`), 또는 외부 큐. 착수 지점: `ScanWorker`/`JobQueue` 포트. | 중간 |
+| **OSV CVSS 숫자 점수 파싱** | 현재 GHSA 텍스트 심각도만 매핑(§7 한계). 착수 지점: `enrich-osv`/`connector`. | 낮음~중간 |
+| ~~토큰 발급/폐기 API~~ | **완료**. admin 전용 `POST`/`GET`/`DELETE /v1/tokens`, `TokenStore.listByTenant` 추가, 발급자 테넌트 범위, 원문 1회 노출·해시만 저장 — D8 확장. | — |
 | ~~스캔 비동기화(큐)~~ | **완료**. `JobQueue` 포트(InMemory·Postgres) + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id` — D9. | — |
 | ~~인증 DB 토큰화 + OIDC~~ | **완료**. `TokenStore`+`DbAuthProvider`(sha256, `002_api_token.sql`), `OidcAuthProvider`+`CompositeAuthProvider`(jose, `OMNIGUARD_OIDC`). | — |
 | ~~GitHub 연결 + CI 가동~~ | **완료**(2026-06-02). remote `pangkim-mz/AIO-TF` 연결, push 트리거로 CI 가동. Node 22·pnpm 11 호환 수정 후 첫 통과(`f20e1dd`). | — |
 
-**권장 순서**: ~~GitHub 연결~~ → ~~인증 DB·OIDC~~ → ~~큐~~(완료) → 토큰 발급 API → 큐 고도화(선택).
+**권장 순서**: ~~GitHub 연결~~ → ~~인증 DB·OIDC~~ → ~~큐~~ → ~~토큰 발급 API~~(완료) → 큐 고도화(선택).
 
 **4) 작업 규칙**: §4를 따른다. 새 도메인/기능이라면 코어 0줄 원칙을 먼저 점검하고,
 순수 로직은 `lib`/패키지로 분리해 단위 테스트. 끝나면 README·CLAUDE.md·이 문서·메모리를 갱신.
@@ -223,4 +225,4 @@ PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  #
 - `yarn.lock` 미지원(npm/pnpm lockfile만). 없으면 의존성 레인지 근사치로 폴백.
 - OSV의 CVSS 숫자 점수 파싱 미구현(현재 GHSA 텍스트 심각도만 매핑).
 - 작업 큐는 자체 구현(인프로세스 워커). 재시도/백오프·데드레터·별도 워커 프로세스 미구현.
-- 토큰 발급/폐기 API 미도입(현재 DB 토큰은 시작 시 `OMNIGUARD_TOKENS` 시딩으로 주입).
+- 토큰 발급/폐기 API는 admin 전용. 토큰은 발급자 본인 테넌트로만 범위가 한정된다(타 테넌트 토큰 관리 불가 — 의도된 격리).

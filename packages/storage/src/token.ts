@@ -20,6 +20,8 @@ export interface StoredToken {
 export interface TokenStore {
   /** 해시로 토큰을 조회한다. 없으면 null. */
   findByHash(tokenHash: string): Promise<StoredToken | null>;
+  /** 한 테넌트의 토큰을 모두 조회한다(관리/폐기용). 원문은 저장되지 않으므로 해시만 반환. */
+  listByTenant(tenantId: string): Promise<StoredToken[]>;
   /** 토큰을 삽입하거나 갱신한다(해시 기준 멱등). */
   upsertToken(token: StoredToken): Promise<void>;
   /** 토큰을 폐기한다. 실제로 삭제됐으면 true. */
@@ -38,6 +40,12 @@ export class InMemoryTokenStore implements TokenStore {
 
   async findByHash(tokenHash: string): Promise<StoredToken | null> {
     return this.byHash.get(tokenHash) ?? null;
+  }
+
+  async listByTenant(tenantId: string): Promise<StoredToken[]> {
+    return [...this.byHash.values()]
+      .filter((token) => token.tenantId === tenantId)
+      .map((token) => ({ ...token }));
   }
 
   async upsertToken(token: StoredToken): Promise<void> {

@@ -65,13 +65,18 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 ## API 규약
 
 - 인증: `Authorization: Bearer <token>` → `AuthProvider`가 테넌트/역할 해석(`apps/api/src/auth.ts`).
-  `DATABASE_URL` 있으면 `DbAuthProvider`(토큰 DB `api_token`, sha256 해시 저장, 시작 시 `OMNIGUARD_TOKENS` 시딩),
-  없으면 `InMemoryAuthProvider`. 토큰 영속화는 `packages/storage`의 `TokenStore` 포트(InMemory·Postgres).
+  토큰은 항상 `TokenStore` 기반 `DbAuthProvider`로 해석한다(`DATABASE_URL` 있으면 `PostgresTokenStore`,
+  없으면 `InMemoryTokenStore`). 토큰 원문은 저장하지 않고 sha256 해시만, 시작 시 `OMNIGUARD_TOKENS` 멱등 시딩.
+  토큰 영속화는 `packages/storage`의 `TokenStore` 포트(InMemory·Postgres).
   `api_token`은 인증이 테넌트 컨텍스트보다 먼저라 **RLS 비대상**(control-plane).
+- 토큰 발급/폐기: admin 전용 `POST /v1/tokens`(발급, 원문 1회 노출 후 해시만 저장)·`GET /v1/tokens`(목록,
+  메타데이터만)·`DELETE /v1/tokens/:tokenHash`(폐기). **tenantId는 본문이 아니라 발급자 principal에서** 가져와
+  타 테넌트 토큰 발급/조회/폐기를 차단한다(control-plane이지만 코드레벨로 테넌트 격리). `buildServer`의
+  `tokens?: TokenStore` deps가 있으면 라우트를 등록한다(index.ts가 양쪽 모드에서 주입).
 - OIDC(하이브리드): `OMNIGUARD_OIDC`(JSON `{issuer,audience,jwksUri,tenantClaim?,roleClaim?}`) 설정 시
   `OidcAuthProvider`(jose, JWKS 서명 검증·`iss`/`aud`/`exp`)를 `CompositeAuthProvider`로 토큰 provider 앞에 합성
   (OIDC=사람 → DB 토큰=M2M 폴백). IdP 무관, claim 이름만 env 매핑(기본 `tenant_id`/`role`). 역할은 `isRole`로 좁힘.
-- RBAC: 읽기=인증된 전 역할, 쓰기(스캔)=`admin`/`analyst`.
+- RBAC: 읽기=인증된 전 역할, 쓰기(스캔)=`admin`/`analyst`, 토큰 관리=`admin`만.
 - 응답 포맷 고정(`apps/api/src/envelope.ts`): 성공 `{ok:true,data}` / 실패 `{ok:false,error:{code,message}}`.
   code=디버깅용, message=사용자용. 내부 오류 상세는 비노출.
 - 스캔은 비동기: `POST /v1/scans/*` → 202 `{jobId,status}`, `GET /v1/jobs/:id`로 폴링. web `ApiClient`는
@@ -97,14 +102,16 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 ## 다음 단계 (로드맵 [예정])
 
-1. **인증 잔여** — DB 토큰·OIDC 완료. 남은 것: 토큰 발급/폐기 API(엔드포인트, `TokenStore.deleteToken` 이미 존재).
-2. **큐 고도화** — 자체 인프로세스 워커 완료. 남은 것(선택): 재시도/백오프, 데드레터, 별도 워커 프로세스, 외부 큐.
+1. **큐 고도화** — 자체 인프로세스 워커 완료. 남은 것(선택): 재시도/백오프, 데드레터, 별도 워커 프로세스, 외부 큐.
+2. **OSV CVSS 숫자 점수 파싱** — 현재 GHSA 텍스트 심각도만 매핑(알려진 한계).
 
 완료: CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
 대시보드 서비스 뷰(`/services` + `lib/services.ts`),
 **인증 DB 토큰화**(`TokenStore` 포트 + `DbAuthProvider`, sha256 해시, `002_api_token.sql`),
 **OIDC 하이브리드**(`OidcAuthProvider` + `CompositeAuthProvider`, jose, `OMNIGUARD_OIDC`),
-**스캔 비동기화**(`JobQueue` 포트 + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id`).
+**스캔 비동기화**(`JobQueue` 포트 + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id`),
+**토큰 발급/폐기 API**(admin 전용 `POST`/`GET`/`DELETE /v1/tokens`, `TokenStore.listByTenant` 추가,
+발급자 테넌트 범위, 원문 1회 노출·해시만 저장).
 
 ### 알려진 한계
 

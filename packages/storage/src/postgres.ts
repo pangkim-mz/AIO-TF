@@ -272,6 +272,23 @@ export class PostgresTokenStore implements TokenStore {
     };
   }
 
+  async listByTenant(tenantId: string): Promise<StoredToken[]> {
+    const { rows } = await this.pool.query<{
+      token_hash: string;
+      role: string;
+      label: string;
+    }>(
+      "select token_hash, role, label from api_token where tenant_id = $1 order by created_at",
+      [tenantId],
+    );
+    return rows.map((row) => ({
+      tokenHash: row.token_hash,
+      tenantId,
+      role: row.role,
+      label: row.label,
+    }));
+  }
+
   async upsertToken(token: StoredToken): Promise<void> {
     await this.pool.query(
       `insert into api_token (token_hash, tenant_id, role, label)
