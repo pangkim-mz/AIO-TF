@@ -172,6 +172,7 @@
 20. `e1f23b6` advisory lock으로 동시 마이그레이션 직렬화 — PR #1 머지 후 CI postgres job이 병렬 `CREATE TABLE IF NOT EXISTS` 충돌(`pg_type` 23505)로 실패한 것 수정. 운영 다중 인스턴스에도 동일 레이스라 실버그. 재현 테스트 추가. PR #2(`ac8a2f1`).
 21. `5bf0d31` 대시보드 reads `no-store` — 로컬 구동 중 Next fetch 디스크 캐시(`.next/cache`)로 스캔 후에도 빈 화면이 남던 것 수정. 관제 대시보드는 항상 라이브. PR #3(`353e998`).
 22. `6f8e840` 토큰 발급/폐기 API — admin 전용 `POST`/`GET`/`DELETE /v1/tokens`. `TokenStore`에 `listByTenant` 추가(InMemory·Postgres + 계약 테스트). tenantId를 발급자 principal에서 가져와 타 테넌트 토큰 발급/조회/폐기 차단. 발급 시 원문 1회 노출 후 sha256 해시만 저장. index.ts를 양쪽 모드 모두 `DbAuthProvider`+`TokenStore`로 통일(무DB 모드도 발급 가능) — D8 확장. PR #5(squash 머지, CI build-test·postgres green).
+23. `3cda948` docs — PROJECT_NOTES에 토큰 발급 API(#5) 머지 결과 반영. PR #6.
 
 ---
 
@@ -186,7 +187,7 @@ cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
 pnpm typecheck && pnpm test     # 111 passed / 4 skipped 기대
-git log --oneline -6            # HEAD가 6f8e840(PR #5 토큰 발급 API 머지)인지
+git log --oneline -6            # HEAD가 3cda948(PR #6 PROJECT_NOTES 반영)인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
 > 현재 로컬 브랜치는 `main`만 있고 origin/main과 동기 상태(이전 작업 브랜치는 머지 후 삭제됨).
@@ -201,6 +202,12 @@ PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  #
 # 주의: API_BASE_URL은 127.0.0.1(IPv4)로 — localhost(::1)면 Next가 자기 자신을 호출한다.
 # 무DB(인메모리)라 재시작 시 데이터 소멸. 종료는 :3000/:3001 프로세스 kill.
 ```
+
+**[최근 세션 메모, 2026-06-04]** 진행 보고용 자료를 별도로 제작했다(**레포 코드 변경 0줄**).
+라이브로 API(:3000)+대시보드(:3001)를 구동하고 4개 도메인을 스캔(자산 15·발견 41·통합 영향도 82,
+**OSV 실연동** — lodash 4.17.4의 실제 GHSA 권고가 그래프 전파로 서비스까지 상속됨을 실증)한 뒤,
+단일 HTML 보고서 + pptx(12슬라이드)를 생성했다. 산출물은 보고용이라 레포 외부에 둔다(빌드 산출물 불커밋
+원칙). 데모 시딩→스크린샷→보고서 빌드 절차는 재현 가능. 코드 진행(큐/CVSS)은 아래 후보 그대로.
 
 **3) 다음 작업 후보** (로드맵 [예정], 우선순위 의견 포함):
 
