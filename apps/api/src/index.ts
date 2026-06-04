@@ -2,6 +2,7 @@ import { newId } from "@omniguard/schema";
 import {
   InMemoryJobQueue,
   InMemoryRepository,
+  InMemoryTokenStore,
   PostgresJobQueue,
   PostgresRepository,
   PostgresTokenStore,
@@ -16,7 +17,6 @@ import { ScanWorker } from "./worker";
 import {
   CompositeAuthProvider,
   DbAuthProvider,
-  InMemoryAuthProvider,
   OidcAuthProvider,
   type AuthProvider,
   type OidcConfig,
@@ -81,23 +81,24 @@ async function main(): Promise<void> {
   const url = process.env.DATABASE_URL;
   let repo: Repository;
   let queue: JobQueue;
-  let tokenAuth: AuthProvider;
+  let tokenStore: TokenStore;
 
   if (url) {
     // 운영 경로: Postgres에 영속화하고 토큰·작업 큐도 DB에서 다룬다.
     const pgRepo = new PostgresRepository({ connectionString: url });
     await pgRepo.migrate();
-    const tokenStore = new PostgresTokenStore({ connectionString: url });
-    await seedTokens(tokenStore);
     repo = pgRepo;
     queue = new PostgresJobQueue({ connectionString: url });
-    tokenAuth = new DbAuthProvider(tokenStore);
+    tokenStore = new PostgresTokenStore({ connectionString: url });
   } else {
     // 로컬/개발 경로: 인메모리 영속화 + 인메모리 토큰 + 인메모리 큐.
     repo = new InMemoryRepository();
     queue = new InMemoryJobQueue();
-    tokenAuth = new InMemoryAuthProvider(loadTokens());
+    tokenStore = new InMemoryTokenStore();
   }
+  // 토큰 시딩은 양쪽 공통(OMNIGUARD_TOKENS 또는 dev-token) — 발급 API가 두 모드에서 동일하게 동작한다.
+  await seedTokens(tokenStore);
+  const tokenAuth: AuthProvider = new DbAuthProvider(tokenStore);
 
   // 하이브리드: OIDC(사람) 우선 시도 → 실패 시 토큰(M2M/CI)으로 폴백.
   const oidc = loadOidc();
@@ -114,7 +115,7 @@ async function main(): Promise<void> {
   });
   worker.start();
 
-  const app = buildServer({ repo, auth, queue });
+  const app = buildServer({ repo, auth, queue, tokens: tokenStore });
 
   await app.listen({ port: PORT, host: HOST });
   console.error(`OmniGuard API listening on http://${HOST}:${PORT}`);

@@ -1,10 +1,17 @@
+import { randomBytes } from "node:crypto";
 import Fastify, {
   type FastifyInstance,
   type FastifyReply,
   type FastifyRequest,
 } from "fastify";
 import { z } from "zod";
-import type { JobQueue, JobType, Repository } from "@omniguard/storage";
+import {
+  type JobQueue,
+  type JobType,
+  type Repository,
+  type TokenStore,
+  hashToken,
+} from "@omniguard/storage";
 import { ApiError, sendError, sendOk } from "./envelope";
 import { type AuthProvider, type Principal, hasRole } from "./auth";
 import {
@@ -25,6 +32,19 @@ export interface ServerDeps {
   repo: Repository;
   auth: AuthProvider;
   queue: JobQueue;
+  /** 토큰 발급/폐기용. 없으면 /v1/tokens 라우트를 등록하지 않는다. */
+  tokens?: TokenStore;
+}
+
+/** 발급할 토큰의 역할/라벨. tenantId는 본문이 아니라 발급자 principal에서 가져온다. */
+const IssueTokenBody = z.object({
+  role: z.enum(["admin", "analyst", "viewer"]),
+  label: z.string().trim().max(200).default(""),
+});
+
+/** 강한 opaque 토큰 원문을 생성한다(256bit, base64url). 저장은 해시만. */
+function generateRawToken(): string {
+  return randomBytes(32).toString("base64url");
 }
 
 function bearerToken(request: FastifyRequest): string | null {
@@ -139,6 +159,50 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
         error: job.error,
       });
     });
+
+    // ── 토큰 관리(admin 전용). control-plane이므로 발급자 본인 테넌트로만 범위가 한정된다 ──
+    const tokens = deps.tokens;
+    if (tokens) {
+      // 발급: 원문은 이 응답에서 1회만 노출되고, 저장은 sha256 해시만 한다.
+      api.post("/v1/tokens", async (request, reply) => {
+        const principal = principalOf(request);
+        requireAdmin(principal);
+        const { role, label } = IssueTokenBody.parse(request.body);
+        const rawToken = generateRawToken();
+        const tokenHash = hashToken(rawToken);
+        await tokens.upsertToken({ tokenHash, tenantId: principal.tenantId, role, label });
+        // token(원문)은 다시 조회할 수 없다 — 이 응답에서만 받는다.
+        sendOk(reply, { token: rawToken, tokenHash, role, label }, 201);
+      });
+
+      // 목록: 발급자 테넌트의 토큰 메타데이터만(원문 없음).
+      api.get("/v1/tokens", async (request, reply) => {
+        const principal = principalOf(request);
+        requireAdmin(principal);
+        const stored = await tokens.listByTenant(principal.tenantId);
+        sendOk(
+          reply,
+          stored.map((token) => ({
+            tokenHash: token.tokenHash,
+            role: token.role,
+            label: token.label,
+          })),
+        );
+      });
+
+      // 폐기: 다른 테넌트의 토큰은 보이지 않으므로 폐기할 수 없다(404).
+      api.delete("/v1/tokens/:tokenHash", async (request, reply) => {
+        const principal = principalOf(request);
+        requireAdmin(principal);
+        const { tokenHash } = request.params as { tokenHash: string };
+        const found = await tokens.findByHash(tokenHash);
+        if (!found || found.tenantId !== principal.tenantId) {
+          throw new ApiError(404, "not_found", "토큰을 찾을 수 없습니다.");
+        }
+        await tokens.deleteToken(tokenHash);
+        sendOk(reply, { tokenHash, revoked: true });
+      });
+    }
   });
 
   return app;
@@ -147,6 +211,12 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 function requireWrite(principal: Principal): void {
   if (!hasRole(principal, ["admin", "analyst"])) {
     throw new ApiError(403, "forbidden", "스캔 실행 권한이 없습니다.");
+  }
+}
+
+function requireAdmin(principal: Principal): void {
+  if (!hasRole(principal, ["admin"])) {
+    throw new ApiError(403, "forbidden", "토큰 관리 권한이 없습니다.");
   }
 }
 

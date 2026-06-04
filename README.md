@@ -90,14 +90,16 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 ```
 
 - **인증**: `Authorization: Bearer <token>` → `AuthProvider`가 테넌트/역할 해석.
-  - `DATABASE_URL` 설정 시 **토큰을 DB(`api_token`)에서 해석**(`DbAuthProvider`). 토큰 원문은
-    저장하지 않고 **sha256 해시**만 보관한다. 시작 시 `OMNIGUARD_TOKENS`(JSON)를 DB에 멱등 시딩.
-  - `DATABASE_URL` 미설정 시 인메모리 토큰(`InMemoryAuthProvider`, 개발용 `dev-token`).
+  - 토큰은 항상 `TokenStore`(`DbAuthProvider`)로 해석한다. 토큰 원문은 저장하지 않고
+    **sha256 해시**만 보관한다. 시작 시 `OMNIGUARD_TOKENS`(JSON)를 저장소에 멱등 시딩.
+  - `DATABASE_URL` 설정 시 Postgres(`api_token`), 미설정 시 인메모리 저장소(개발용 `dev-token`).
   - **OIDC(하이브리드)**: `OMNIGUARD_OIDC`(JSON) 설정 시 IdP 발급 JWT를 검증한다(`OidcAuthProvider`,
     리소스 서버 방식 — JWKS 서명 검증 + `iss`/`aud`/`exp`). `CompositeAuthProvider`가 OIDC(사람) →
     DB 토큰(M2M/CI) 순으로 폴백. 설정: `{ issuer, audience, jwksUri, tenantClaim?, roleClaim? }`
     (claim 기본값 `tenant_id`/`role`). IdP 무관 — claim 매핑만 env로 조정.
-  - 추후 토큰 발급·폐기 API로 확장 가능(`api_token`은 RLS 비대상 control-plane).
+  - **토큰 발급/폐기 API**: admin이 런타임에 토큰을 발급·폐기한다(아래 라우트 표). 발급 시
+    원문은 응답에 **1회만** 노출되고 저장은 해시만. 토큰은 발급자 본인 테넌트로만 범위가
+    한정된다(`api_token`은 RLS 비대상 control-plane).
 - **인가(RBAC)**: 읽기는 인증된 모든 역할, 쓰기(스캔)는 `admin`/`analyst`만.
 - **일관 응답 포맷**: 성공 `{ ok: true, data }` / 실패 `{ ok: false, error: { code, message } }`
   (code=디버깅용, message=사용자용, 내부 오류는 비노출).
@@ -113,6 +115,9 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 | POST | `/v1/scans/iac` | admin/analyst | Terraform plan JSON 스캔·미설정 평가(비동기 접수) |
 | POST | `/v1/scans/service` | admin/analyst | 서비스 매니페스트 → 도메인 간 엣지 연결(비동기 접수) |
 | GET | `/v1/jobs/:id` | 인증 | 스캔 작업 상태/결과 폴링(테넌트 범위) |
+| POST | `/v1/tokens` | admin | 토큰 발급 — 원문 1회 노출, 저장은 해시만. 본문 `{ role, label? }` |
+| GET | `/v1/tokens` | admin | 테넌트 토큰 목록(메타데이터만: `tokenHash`/`role`/`label`) |
+| DELETE | `/v1/tokens/:tokenHash` | admin | 토큰 폐기(본인 테넌트 범위, 타 테넌트는 404) |
 
 **스캔은 비동기**다. `POST /v1/scans/*`는 본문을 검증한 뒤 작업을 큐에 넣고 `202`로
 `{ jobId, status: "queued" }`를 즉시 반환한다. 인프로세스 워커가 OSV 보강까지 처리하며,

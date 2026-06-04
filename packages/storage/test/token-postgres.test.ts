@@ -32,6 +32,7 @@ if (!url) {
   // (토큰 해시가 매번 고유해 테스트 간 격리는 자연히 보장된다.)
   tokenStoreContract("Postgres", async (): Promise<TokenStore> => ({
     findByHash: (h) => base.findByHash(h),
+    listByTenant: (t) => base.listByTenant(t),
     upsertToken: (t) => base.upsertToken(t),
     deleteToken: (h) => base.deleteToken(h),
     close: async () => {},
