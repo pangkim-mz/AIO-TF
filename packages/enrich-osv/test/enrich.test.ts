@@ -68,6 +68,47 @@ describe("enrichWithOsv", () => {
     expect(finding.category).toBe("vulnerability");
   });
 
+  it("CVSS 벡터가 있으면 숫자 점수와 그 구간의 severity를 채운다", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        vulns: [
+          {
+            id: "GHSA-cvss-0001",
+            summary: "RCE",
+            // 텍스트 라벨은 MODERATE지만 CVSS는 9.8(CRITICAL) → CVSS 우선.
+            database_specific: { severity: "MODERATE" },
+            severity: [
+              {
+                type: "CVSS_V3",
+                score: "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+              },
+            ],
+          },
+        ],
+      }),
+    ) as unknown as typeof fetch;
+
+    const findings = await enrichWithOsv([makeAsset("lodash", "4.17.20")], newId(), {
+      fetchImpl,
+    });
+    expect(findings[0]!.cvss).toBe(9.8);
+    expect(findings[0]!.severity).toBe("CRITICAL");
+  });
+
+  it("CVSS 벡터가 없으면 cvss는 null, 텍스트 라벨로 폴백한다", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        vulns: [{ id: "GHSA-text-only", database_specific: { severity: "HIGH" } }],
+      }),
+    ) as unknown as typeof fetch;
+
+    const findings = await enrichWithOsv([makeAsset("x", "1.0.0")], newId(), {
+      fetchImpl,
+    });
+    expect(findings[0]!.cvss).toBeNull();
+    expect(findings[0]!.severity).toBe("HIGH");
+  });
+
   it("취약점이 없으면 빈 배열을 반환한다", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({})) as unknown as typeof fetch;
     const findings = await enrichWithOsv(
