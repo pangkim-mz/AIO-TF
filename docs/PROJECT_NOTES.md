@@ -173,7 +173,7 @@
 21. `5bf0d31` 대시보드 reads `no-store` — 로컬 구동 중 Next fetch 디스크 캐시(`.next/cache`)로 스캔 후에도 빈 화면이 남던 것 수정. 관제 대시보드는 항상 라이브. PR #3(`353e998`).
 22. `6f8e840` 토큰 발급/폐기 API — admin 전용 `POST`/`GET`/`DELETE /v1/tokens`. `TokenStore`에 `listByTenant` 추가(InMemory·Postgres + 계약 테스트). tenantId를 발급자 principal에서 가져와 타 테넌트 토큰 발급/조회/폐기 차단. 발급 시 원문 1회 노출 후 sha256 해시만 저장. index.ts를 양쪽 모드 모두 `DbAuthProvider`+`TokenStore`로 통일(무DB 모드도 발급 가능) — D8 확장. PR #5(squash 머지, CI build-test·postgres green).
 23. `3cda948` docs — PROJECT_NOTES에 토큰 발급 API(#5) 머지 결과 반영. PR #6.
-24. OSV CVSS 숫자 점수 파싱 — `enrich-osv/src/cvss.ts`(순수 함수)가 CVSS v3.0/v3.1 벡터를 명세 그대로 Base Score(0–10)로 계산. `Finding.cvss`를 채우고, 점수가 있으면 정성 등급 구간으로 severity를 정밀화(없으면 기존 GHSA 텍스트 라벨로 폴백). 의존성 0(공식 공식 직접 구현), 코어(`schema`/`scoring`/`graph`/`storage`) 0줄 — `Finding.cvss` 필드는 원래 스키마에 있었음. 단위 테스트 12건 추가(123 passed). v2/v4는 미지원→텍스트 폴백(§7).
+24. `7ab4243` OSV CVSS 숫자 점수 파싱 — `enrich-osv/src/cvss.ts`(순수 함수)가 CVSS v3.0/v3.1 벡터를 명세 그대로 Base Score(0–10)로 계산. `Finding.cvss`를 채우고, 점수가 있으면 정성 등급 구간으로 severity를 정밀화(없으면 기존 GHSA 텍스트 라벨로 폴백). 의존성 0(공식 직접 구현), 코어(`schema`/`scoring`/`graph`/`storage`) 0줄 — `Finding.cvss` 필드는 원래 스키마에 있었음. 단위 테스트 12건 추가(123 passed). v2/v4는 미지원→텍스트 폴백(§7). PR #8(squash 머지).
 
 ---
 
@@ -188,7 +188,7 @@ cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
 node -v                         # v22.13+ 필요(pnpm 11.5.0 요구)
 pnpm install
 pnpm typecheck && pnpm test     # 123 passed / 4 skipped 기대
-git log --oneline -6            # HEAD가 968b2da(데모 검증 세션 머지)인지
+git log --oneline -6            # HEAD가 7ab4243(OSV CVSS 파싱 PR #8)인지
 ```
 > vitest가 Windows Temp 캐시로 가끔 `UNKNOWN` 오류(flaky) → **재실행하면 정상**.
 > 현재 로컬 브랜치는 `main`만 있고 origin/main과 동기 상태(이전 작업 브랜치는 머지 후 삭제됨).
