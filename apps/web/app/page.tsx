@@ -7,6 +7,7 @@ interface Feature {
   body: string;
 }
 
+// --- 상단 아이콘들 ---
 const PackageIcon = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="m7.5 4.27 9 5.15" />
@@ -32,6 +33,42 @@ const LinkIcon = (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
+
+// --- 직접 그린 인라인 SVG 일러스트 (Base64 대체) ---
+const Step1Illustration = (
+  <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+    <rect width="200" height="150" fill="#f0f9ff" rx="8" />
+    <rect x="20" y="30" width="40" height="20" fill="#bae6fd" rx="4" />
+    <rect x="20" y="65" width="40" height="20" fill="#bae6fd" rx="4" />
+    <rect x="20" y="100" width="40" height="20" fill="#bae6fd" rx="4" />
+    <path d="M70 40 L110 75 L70 110" fill="none" stroke="#3b82f6" strokeWidth="2" />
+    <rect x="130" y="45" width="50" height="60" fill="#3b82f6" rx="6" />
+    <line x1="140" y1="60" x2="170" y2="60" stroke="white" strokeWidth="4" strokeLinecap="round" />
+    <line x1="140" y1="75" x2="160" y2="75" stroke="white" strokeWidth="4" strokeLinecap="round" />
+  </svg>
+);
+
+const Step2Illustration = (
+  <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+    <rect width="200" height="150" fill="#f0f9ff" rx="8" />
+    <line x1="60" y1="100" x2="100" y2="50" stroke="#9ca3af" strokeWidth="3" />
+    <line x1="140" y1="100" x2="100" y2="50" stroke="#9ca3af" strokeWidth="3" />
+    <circle cx="100" cy="50" r="18" fill="#ef4444" />
+    <circle cx="60" cy="100" r="14" fill="#3b82f6" />
+    <circle cx="140" cy="100" r="14" fill="#10b981" />
+    <path d="M95 45 L100 40 L105 45" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const Step3Illustration = (
+  <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "auto" }}>
+    <rect width="200" height="150" fill="#f0f9ff" rx="8" />
+    <path d="M40 110 A 60 60 0 0 1 160 110" fill="none" stroke="#e5e7eb" strokeWidth="16" strokeLinecap="round" />
+    <path d="M40 110 A 60 60 0 0 1 100 50" fill="none" stroke="#f59e0b" strokeWidth="16" strokeLinecap="round" />
+    <circle cx="100" cy="110" r="12" fill="#1f2937" />
+    <line x1="100" y1="110" x2="125" y2="65" stroke="#1f2937" strokeWidth="6" strokeLinecap="round" />
   </svg>
 );
 
@@ -61,20 +98,24 @@ const FEATURES: Feature[] = [
 interface Step {
   title: string;
   body: string;
+  illustration: ReactNode; 
 }
 
 const STEPS: Step[] = [
   {
     title: "정규화",
     body: "세 도메인의 입력을 하나의 Asset / Finding / RiskScore 스키마로 흡수합니다.",
+    illustration: Step1Illustration,
   },
   {
     title: "그래프 전파",
     body: "depends_on · hosted_on · provided_by 엣지를 따라 위험을 상위 자산으로 전파합니다.",
+    illustration: Step2Illustration,
   },
   {
     title: "통합 점수",
     body: "결정론적 스코어링으로 서비스 단위 통합 리스크를 재현 가능하게 산출합니다.",
+    illustration: Step3Illustration,
   },
 ];
 
@@ -113,14 +154,27 @@ export default function HomePage(): ReactNode {
       </section>
 
       <section className="steps" aria-label="동작 방식">
-        <h2 className="section-title">동작 방식</h2>
-        <div className="steps-grid">
+        <div className="steps-header" style={{ textAlign: "center", marginBottom: "2rem" }}>
+          <h2 className="section-title">동작 방식</h2>
+          
+        </div>
+        
+        {/* 카드 그리드 스타일 임시 적용 (CSS 파일로 옮기시면 더 좋습니다) */}
+        <div className="steps-card-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
           {STEPS.map((s, i) => (
-            <div className="step" key={s.title}>
-              <span className="step-num">{i + 1}</span>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
-            </div>
+            <article className="step-card" key={s.title} style={{ border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden", backgroundColor: "#fff", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
+              <div className="step-image-container">
+                {/* 렌더링된 SVG 일러스트가 이 자리에 들어갑니다. */}
+                {s.illustration}
+              </div>
+              <div className="step-content" style={{ padding: "1.5rem" }}>
+                <h3 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
+                  <span className="step-num" style={{ fontWeight: "bold", marginRight: "0.5rem" }}>{i + 1}.</span>
+                  {s.title}
+                </h3>
+                <p style={{ color: "#4b5563", lineHeight: "1.5" }}>{s.body}</p>
+              </div>
+            </article>
           ))}
         </div>
       </section>
@@ -137,7 +191,7 @@ export default function HomePage(): ReactNode {
       </section>
 
       <footer className="site-footer">
-        <span>© 2026 OmniGuard</span>
+        <span>© 2026 OmniGuard. Megazone이 모든 권리를 보유하고 있습니다.</span>
         <nav aria-label="푸터 메뉴">
           <Link href="/dashboard">대시보드</Link>
           <Link href="/services">서비스</Link>
