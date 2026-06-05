@@ -1,0 +1,1182 @@
+{
+  "colors": {
+    "all": [
+      {
+        "hex": "#2a2a2d",
+        "rgb": {
+          "r": 42,
+          "g": 42,
+          "b": 45,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 3,
+          "l": 17
+        },
+        "count": 2322,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#f7f7f8",
+        "rgb": {
+          "r": 247,
+          "g": 247,
+          "b": 248,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 7,
+          "l": 97
+        },
+        "count": 522,
+        "contexts": [
+          "background",
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#4f5054",
+        "rgb": {
+          "r": 79,
+          "g": 80,
+          "b": 84,
+          "a": 1
+        },
+        "hsl": {
+          "h": 228,
+          "s": 3,
+          "l": 32
+        },
+        "count": 296,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#3e5fff",
+        "rgb": {
+          "r": 62,
+          "g": 95,
+          "b": 255,
+          "a": 1
+        },
+        "hsl": {
+          "h": 230,
+          "s": 100,
+          "l": 62
+        },
+        "count": 267,
+        "contexts": [
+          "text",
+          "border",
+          "background"
+        ]
+      },
+      {
+        "hex": "#000000",
+        "rgb": {
+          "r": 0,
+          "g": 0,
+          "b": 0,
+          "a": 1
+        },
+        "hsl": {
+          "h": 0,
+          "s": 0,
+          "l": 0
+        },
+        "count": 148,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#c8c9cb",
+        "rgb": {
+          "r": 200,
+          "g": 201,
+          "b": 203,
+          "a": 1
+        },
+        "hsl": {
+          "h": 220,
+          "s": 3,
+          "l": 79
+        },
+        "count": 118,
+        "contexts": [
+          "border",
+          "background",
+          "text"
+        ]
+      },
+      {
+        "hex": "#696a6d",
+        "rgb": {
+          "r": 105,
+          "g": 106,
+          "b": 109,
+          "a": 1
+        },
+        "hsl": {
+          "h": 225,
+          "s": 2,
+          "l": 42
+        },
+        "count": 48,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#e2e2e4",
+        "rgb": {
+          "r": 226,
+          "g": 226,
+          "b": 228,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 4,
+          "l": 89
+        },
+        "count": 16,
+        "contexts": [
+          "border"
+        ]
+      },
+      {
+        "hex": "#b2b2b3",
+        "rgb": {
+          "r": 178,
+          "g": 178,
+          "b": 179,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 1,
+          "l": 70
+        },
+        "count": 12,
+        "contexts": [
+          "border",
+          "text"
+        ]
+      },
+      {
+        "hex": "#e02f1f",
+        "rgb": {
+          "r": 224,
+          "g": 47,
+          "b": 31,
+          "a": 1
+        },
+        "hsl": {
+          "h": 5,
+          "s": 76,
+          "l": 50
+        },
+        "count": 8,
+        "contexts": [
+          "background",
+          "border"
+        ]
+      },
+      {
+        "hex": "#404040",
+        "rgb": {
+          "r": 64,
+          "g": 64,
+          "b": 64,
+          "a": 1
+        },
+        "hsl": {
+          "h": 0,
+          "s": 0,
+          "l": 25
+        },
+        "count": 6,
+        "contexts": [
+          "text",
+          "border"
+        ]
+      },
+      {
+        "hex": "#2563eb",
+        "rgb": {
+          "r": 37,
+          "g": 99,
+          "b": 235,
+          "a": 1
+        },
+        "hsl": {
+          "h": 221,
+          "s": 83,
+          "l": 53
+        },
+        "count": 6,
+        "contexts": [
+          "background",
+          "border",
+          "text"
+        ]
+      },
+      {
+        "hex": "#141415",
+        "rgb": {
+          "r": 20,
+          "g": 20,
+          "b": 21,
+          "a": 1
+        },
+        "hsl": {
+          "h": 240,
+          "s": 2,
+          "l": 8
+        },
+        "count": 5,
+        "contexts": [
+          "background"
+        ]
+      }
+    ]
+  },
+  "regions": [
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 30,
+        "w": 1280,
+        "h": 69
+      },
+      "heading": null,
+      "buttonCount": 29,
+      "cardCount": 65,
+      "className": "group-[.sticky-nav]:bg-secondary max-xl:group-[.sticky-nav]:border-b-md max-xl:group-[.sticky-nav]:border-neutral-200 group-[.non-sticky-nav]:max-w-[1600px] group-[.non-sticky-nav]:xl:rounded-full group-[.is-light]:xl:shadow-md group-[.sticky-nav]:xl:mt-3 ease-out mx-auto transition-colors bg-secondary"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 30,
+        "w": 1280,
+        "h": 69
+      },
+      "heading": null,
+      "buttonCount": 29,
+      "cardCount": 65,
+      "className": "group/section"
+    },
+    {
+      "role": "nav",
+      "tag": "nav",
+      "bounds": {
+        "x": 24,
+        "y": 46,
+        "w": 1232,
+        "h": 37
+      },
+      "heading": null,
+      "buttonCount": 29,
+      "cardCount": 64,
+      "className": "flex items-center justify-between"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "nav",
+      "tag": "nav",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 16,
+      "cardCount": 28,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "flex flex-1 flex-col group-[.mobile-header]:mb-8 group-[.mobile-header]:gap-4 ltr:text-left rtl:text-right"
+    },
+    {
+      "role": "nav",
+      "tag": "header",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": null
+    },
+    {
+      "role": "content",
+      "tag": "main",
+      "bounds": {
+        "x": 0,
+        "y": 100,
+        "w": 1280,
+        "h": 5009.84375
+      },
+      "heading": "이 파일은 안전한가요?",
+      "buttonCount": 15,
+      "cardCount": 62,
+      "className": "peer-[.js-header]/transparent-header:**:[.compensate-height]:block"
+    },
+    {
+      "role": "hero",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 100,
+        "w": 1280,
+        "h": 493.390625
+      },
+      "heading": "이 파일은 안전한가요?",
+      "buttonCount": 2,
+      "cardCount": 6,
+      "className": "group/section"
+    },
+    {
+      "role": "sidebar",
+      "tag": "aside",
+      "bounds": {
+        "x": 0,
+        "y": 593.390625,
+        "w": 1280,
+        "h": 215
+      },
+      "heading": null,
+      "buttonCount": 3,
+      "cardCount": 8,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 808.390625,
+        "w": 1280,
+        "h": 823
+      },
+      "heading": "파일 검사기의 기능은 무엇인가요?",
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 1631.390625,
+        "w": 1280,
+        "h": 827
+      },
+      "heading": "NordVPN의 파일 검사기를 선택해야 하는 이유",
+      "buttonCount": 3,
+      "cardCount": 1,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 2458.390625,
+        "w": 1280,
+        "h": 458
+      },
+      "heading": "파일에서 바이러스를 검사하는 방법",
+      "buttonCount": 0,
+      "cardCount": 6,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 2916.390625,
+        "w": 1280,
+        "h": 961.453125
+      },
+      "heading": "파일 수동 검사와 파일 자동 검사 비교",
+      "buttonCount": 0,
+      "cardCount": 36,
+      "className": "group/section"
+    },
+    {
+      "role": "hero",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 3877.84375,
+        "w": 1280,
+        "h": 452
+      },
+      "heading": "파일 검사 이상의 보호",
+      "buttonCount": 1,
+      "cardCount": 5,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 4329.84375,
+        "w": 1280,
+        "h": 780
+      },
+      "heading": "자주 묻는 질문",
+      "buttonCount": 6,
+      "cardCount": 0,
+      "className": "group/section"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "content",
+      "tag": "section",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 0,
+        "h": 0
+      },
+      "heading": null,
+      "buttonCount": 0,
+      "cardCount": 0,
+      "className": "Accordion__panel overflow-hidden transition-all hidden"
+    },
+    {
+      "role": "footer",
+      "tag": "footer",
+      "bounds": {
+        "x": 0,
+        "y": 5109.84375,
+        "w": 1280,
+        "h": 796
+      },
+      "heading": null,
+      "buttonCount": 9,
+      "cardCount": 34,
+      "className": "bg-inverse-primary text-secondary-on-color"
+    }
+  ],
+  "componentClusters": [
+    {
+      "kind": "button",
+      "structuralHash": "button",
+      "instanceCount": 4,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(37, 99, 235)",
+            "color": "rgb(255, 255, 255)",
+            "padding": "12px 28px 12px 28px",
+            "borderRadius": "9999px",
+            "border": "0px none rgb(37, 99, 235)",
+            "fontSize": "16px",
+            "fontWeight": "600"
+          },
+          "instanceCount": 3
+        },
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(200, 201, 203)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(200, 201, 203)",
+            "fontSize": "14px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 1
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>svg",
+      "instanceCount": 7,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(42, 42, 45)",
+            "fontSize": "14px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 5
+        },
+        {
+          "css": {
+            "background": "rgb(20, 20, 21)",
+            "color": "rgb(247, 247, 248)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px 1px 0px 0px solid rgb(178, 178, 179)",
+            "fontSize": "16px",
+            "fontWeight": "400"
+          },
+          "instanceCount": 2
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>p",
+      "instanceCount": 2,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(42, 42, 45)",
+            "fontSize": "14px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 2
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>svg>svg",
+      "instanceCount": 1,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(42, 42, 45)",
+            "fontSize": "14px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 1
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "a",
+      "instanceCount": 3,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(224, 47, 31)",
+            "color": "rgb(255, 255, 255)",
+            "padding": "7px 24px 7px 24px",
+            "borderRadius": "9999px",
+            "border": "1px solid rgb(224, 47, 31)",
+            "fontSize": "12px",
+            "fontWeight": "600"
+          },
+          "instanceCount": 3
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>div>div",
+      "instanceCount": 1,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(243, 247, 252)",
+            "color": "rgb(62, 95, 255)",
+            "padding": "12px 12px 12px 12px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(62, 95, 255)",
+            "fontSize": "14px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 1
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>span",
+      "instanceCount": 1,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(62, 95, 255)",
+            "color": "rgb(255, 255, 255)",
+            "padding": "11px 28px 11px 28px",
+            "borderRadius": "9999px",
+            "border": "1px solid rgb(62, 95, 255)",
+            "fontSize": "16px",
+            "fontWeight": "600"
+          },
+          "instanceCount": 1
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>div",
+      "instanceCount": 3,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(42, 42, 45)",
+            "fontSize": "16px",
+            "fontWeight": "400"
+          },
+          "instanceCount": 3
+        }
+      ]
+    },
+    {
+      "kind": "card",
+      "structuralHash": "div>div",
+      "instanceCount": 3,
+      "variants": [
+        {
+          "css": {
+            "background": "rgb(255, 255, 255)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "24px 24px 24px 24px",
+            "borderRadius": "12px",
+            "border": "1px solid rgb(226, 226, 228)",
+            "fontSize": "16px",
+            "fontWeight": "400"
+          },
+          "instanceCount": 3
+        }
+      ]
+    },
+    {
+      "kind": "button",
+      "structuralHash": "button>span>span",
+      "instanceCount": 6,
+      "variants": [
+        {
+          "css": {
+            "background": "rgba(0, 0, 0, 0)",
+            "color": "rgb(42, 42, 45)",
+            "padding": "0px 0px 0px 0px",
+            "borderRadius": "0px",
+            "border": "0px solid rgb(42, 42, 45)",
+            "fontSize": "16px",
+            "fontWeight": "500"
+          },
+          "instanceCount": 6
+        }
+      ]
+    }
+  ],
+  "accessibility": {
+    "remediation": []
+  },
+  "cssHealth": {
+    "sheets": [
+      {
+        "url": "https://nordvpn.com/ko/link-checker/",
+        "totalBytes": 59,
+        "usedBytes": 59,
+        "unusedBytes": 0,
+        "unusedPercent": 0
+      },
+      {
+        "url": "https://s1.nordcdn.com/d/consent/prod/main.css",
+        "totalBytes": 8475,
+        "usedBytes": 2133,
+        "unusedBytes": 6342,
+        "unusedPercent": 75
+      },
+      {
+        "url": "https://nordvpn.com/ko/link-checker/",
+        "totalBytes": 705,
+        "usedBytes": 451,
+        "unusedBytes": 254,
+        "unusedPercent": 36
+      },
+      {
+        "url": "https://nordvpn.com/static/StoryblokComponent.Bl9luuSA.css",
+        "totalBytes": 195475,
+        "usedBytes": 170349,
+        "unusedBytes": 25126,
+        "unusedPercent": 13
+      }
+    ],
+    "totalBytes": 204714,
+    "usedBytes": 172992,
+    "unusedBytes": 31722,
+    "unusedPercent": 15,
+    "importantCount": 122,
+    "duplicates": 2021,
+    "vendorPrefixes": {
+      "webkit": 60,
+      "moz": 11,
+      "ms": 2,
+      "o": 0
+    },
+    "keyframes": [],
+    "specificity": {
+      "max": [
+        1,
+        10,
+        6
+      ],
+      "average": [
+        0.01,
+        1.87,
+        0.08
+      ],
+      "count": 3036
+    },
+    "issues": [
+      "122 !important rules",
+      "2021 duplicate declarations"
+    ]
+  }
+}

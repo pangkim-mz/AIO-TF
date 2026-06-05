@@ -1,0 +1,94 @@
+{
+  "tone": "neutral",
+  "pronoun": "third-person",
+  "headingStyle": "all-lowercase",
+  "headingLengthClass": "tight",
+  "ctaVerbs": [
+    {
+      "value": "nordvpn",
+      "count": 2
+    },
+    {
+      "value": "pdf",
+      "count": 1
+    }
+  ],
+  "buttonPatterns": [
+    {
+      "value": "nordvpn 구매하기",
+      "count": 2
+    },
+    {
+      "value": "동의",
+      "count": 1
+    },
+    {
+      "value": "거부",
+      "count": 1
+    },
+    {
+      "value": "사용자 정의",
+      "count": 1
+    },
+    {
+      "value": "알아보기",
+      "count": 1
+    },
+    {
+      "value": "제품",
+      "count": 1
+    },
+    {
+      "value": "파일 검사기",
+      "count": 1
+    },
+    {
+      "value": "‌\n파일 추가",
+      "count": 1
+    },
+    {
+      "value": "더 알아보기",
+      "count": 1
+    },
+    {
+      "value": "모든 플랫폼에서 작동",
+      "count": 1
+    },
+    {
+      "value": "전문가가 개발한 도구",
+      "count": 1
+    },
+    {
+      "value": "100% 무료 사용",
+      "count": 1
+    },
+    {
+      "value": "파일을 다운로드하기 전에 검사할 수 있나요?",
+      "count": 1
+    },
+    {
+      "value": "한 번에 여러 파일을 스캔할 수 있나요?",
+      "count": 1
+    },
+    {
+      "value": "pdf 파일에 바이러스가 있을 수 있나요?",
+      "count": 1
+    }
+  ],
+  "sampleHeadings": [
+    "이 파일은 안전한가요?",
+    "파일 검사기의 기능은 무엇인가요?",
+    "NordVPN의 파일 검사기를 선택해야 하는 이유",
+    "모든 플랫폼에서 작동",
+    "전문가가 개발한 도구",
+    "이 파일은 안전한가요?",
+    "파일 검사기의 기능은 무엇인가요?",
+    "NordVPN의 파일 검사기를 선택해야 하는 이유",
+    "모든 플랫폼에서 작동",
+    "전문가가 개발한 도구"
+  ],
+  "stats": {
+    "buttons": 20,
+    "headings": 19
+  }
+}

@@ -1,0 +1,1022 @@
+{
+  "pageIntent": {
+    "type": "unknown",
+    "confidence": 0,
+    "path": "/ko/link-checker",
+    "title": "링크 검사기: 이 URL은 안전한가요? | NordVPN",
+    "description": "다운로드한 파일의 바이러스 감염 여부가 우려되시나요? NordVPN의 무료 온라인 파일 검사기 도구를 사용하여 알려진 멀웨어 서명이 있는지 검사하세요.",
+    "signals": [],
+    "alternates": [],
+    "needsSmart": true
+  },
+  "sectionRoles": {
+    "sections": [
+      {
+        "index": 0,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 30,
+          "w": 1280,
+          "h": 69
+        },
+        "buttonCount": 29,
+        "cardCount": 65,
+        "slots": {
+          "ctaCount": 29,
+          "lede": "주요 내용으로 건너뛰기"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 1,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 30,
+          "w": 1280,
+          "h": 69
+        },
+        "buttonCount": 29,
+        "cardCount": 65,
+        "slots": {
+          "ctaCount": 29,
+          "lede": "가격"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 2,
+        "tag": "nav",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.9,
+        "heading": null,
+        "bounds": {
+          "x": 24,
+          "y": 46,
+          "w": 1232,
+          "h": 37
+        },
+        "buttonCount": 29,
+        "cardCount": 64,
+        "slots": {
+          "ctaCount": 29,
+          "lede": "가격"
+        },
+        "needsSmart": false
+      },
+      {
+        "index": 3,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "왜 NordVPN인가?          VPN이란?             VPN 서버             초고속 VPN             환불 보장 제도             사용자 추적 없음"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 4,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "왜 NordVPN인가?"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 5,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "기능          차세대 안티바이러스   신규            전용 IP             다크 웹 모니터링             안심 통화 보호   신규            다수의 장치 연결             메쉬넷             모든 기능"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 6,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "기능"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 7,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "데스크톱            Windows               macOS               Linux"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 8,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "데스크톱"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 9,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "모바일            안드로이드               iOS"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 10,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "모바일"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 11,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "확장 프로그램            Chrome               Firefox               Edge             모든 앱"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 12,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "확장 프로그램"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 13,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "알아보기          블로그             사이버 보안 허브               NordVPN 소개"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 14,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "알아보기"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 15,
+        "tag": "nav",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.9,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 16,
+        "cardCount": 28,
+        "slots": {
+          "ctaCount": 16
+        },
+        "needsSmart": false
+      },
+      {
+        "index": 16,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "왜 NordVPN인가?          VPN이란?             VPN 서버             초고속 VPN             환불 보장 제도             사용자 추적 없음"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 17,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "왜 NordVPN인가?"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 18,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "기능          모든 기능             차세대 안티바이러스   신규            전용 IP             다크 웹 모니터링             안심 통화 보호   신규            다수의 장치 연결             메쉬넷"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 19,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "기능"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 20,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "모든 앱"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 21,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": ""
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 22,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "데스크톱            Windows               macOS               Linux"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 23,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "데스크톱"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 24,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "모바일            안드로이드               iOS"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 25,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "모바일"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 26,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "확장 프로그램            Chrome               Firefox               Edge"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 27,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "확장 프로그램"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 28,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "블로그             사이버 보안 허브               NordVPN 소개"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 29,
+        "tag": "header",
+        "role": "nav",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": ""
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 30,
+        "tag": "main",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "이 파일은 안전한가요?",
+        "bounds": {
+          "x": 0,
+          "y": 100,
+          "w": 1280,
+          "h": 5009.84375
+        },
+        "buttonCount": 15,
+        "cardCount": 62,
+        "slots": {
+          "heading": "이 파일은 안전한가요?",
+          "subheadings": [
+            "파일 검사기의 기능은 무엇인가요?",
+            "NordVPN의 파일 검사기를 선택해야 하는 이유",
+            "모든 플랫폼에서 작동",
+            "전문가가 개발한 도구"
+          ],
+          "ctaCount": 15,
+          "lede": "링크 검사기"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 31,
+        "tag": "section",
+        "role": "hero",
+        "subrole": null,
+        "confidence": 0.85,
+        "heading": "이 파일은 안전한가요?",
+        "bounds": {
+          "x": 0,
+          "y": 100,
+          "w": 1280,
+          "h": 493.390625
+        },
+        "buttonCount": 2,
+        "cardCount": 6,
+        "slots": {
+          "heading": "이 파일은 안전한가요?",
+          "ctaCount": 2,
+          "lede": "링크 검사기"
+        },
+        "needsSmart": false
+      },
+      {
+        "index": 32,
+        "tag": "aside",
+        "role": "sidebar",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 593.390625,
+          "w": 1280,
+          "h": 215
+        },
+        "buttonCount": 3,
+        "cardCount": 8,
+        "slots": {
+          "ctaCount": 3,
+          "lede": "다운로드한 파일을 자동으로 검사하세요!"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 33,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "파일 검사기의 기능은 무엇인가요?",
+        "bounds": {
+          "x": 0,
+          "y": 808.390625,
+          "w": 1280,
+          "h": 823
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "heading": "파일 검사기의 기능은 무엇인가요?"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 34,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "NordVPN의 파일 검사기를 선택해야 하는 이유",
+        "bounds": {
+          "x": 0,
+          "y": 1631.390625,
+          "w": 1280,
+          "h": 827
+        },
+        "buttonCount": 3,
+        "cardCount": 1,
+        "slots": {
+          "heading": "NordVPN의 파일 검사기를 선택해야 하는 이유",
+          "subheadings": [
+            "모든 플랫폼에서 작동",
+            "전문가가 개발한 도구",
+            "100% 무료 사용"
+          ],
+          "ctaCount": 3,
+          "lede": "NordVPN의 파일 검사기를 선택해야 하는 이유\n모든 플랫폼에서 작동"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 35,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "파일에서 바이러스를 검사하는 방법",
+        "bounds": {
+          "x": 0,
+          "y": 2458.390625,
+          "w": 1280,
+          "h": 458
+        },
+        "buttonCount": 0,
+        "cardCount": 6,
+        "slots": {
+          "heading": "파일에서 바이러스를 검사하는 방법"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 36,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "파일 수동 검사와 파일 자동 검사 비교",
+        "bounds": {
+          "x": 0,
+          "y": 2916.390625,
+          "w": 1280,
+          "h": 961.453125
+        },
+        "buttonCount": 0,
+        "cardCount": 36,
+        "slots": {
+          "heading": "파일 수동 검사와 파일 자동 검사 비교"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 37,
+        "tag": "section",
+        "role": "hero",
+        "subrole": null,
+        "confidence": 0.4,
+        "heading": "파일 검사 이상의 보호",
+        "bounds": {
+          "x": 0,
+          "y": 3877.84375,
+          "w": 1280,
+          "h": 452
+        },
+        "buttonCount": 1,
+        "cardCount": 5,
+        "slots": {
+          "heading": "파일 검사 이상의 보호",
+          "ctaCount": 1
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 38,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": "자주 묻는 질문",
+        "bounds": {
+          "x": 0,
+          "y": 4329.84375,
+          "w": 1280,
+          "h": 780
+        },
+        "buttonCount": 6,
+        "cardCount": 0,
+        "slots": {
+          "heading": "자주 묻는 질문",
+          "subheadings": [
+            "파일을 다운로드하기 전에 검사할 수 있나요?",
+            "한 번에 여러 파일을 스캔할 수 있나요?",
+            "PDF 파일에 바이러스가 있을 수 있나요?",
+            "파일 검사기가 모든 유형의 파일에서 오류를 감지하나요?"
+          ],
+          "ctaCount": 6,
+          "lede": "자주 묻는 질문\n파일을 다운로드하기 전에 검사할 수 있나요?\n한 번에 여러 파일을 스캔할 수 있나요?\nPDF 파일에 바이러스가 있을 수 있나요?\n파일 검사기가 모든 유형의 파일에서 오류를 감지하나요?\n파일에 바이러스가 포함된 경우 어떻게 해야 하나요?\n감염된 파일을 다운로드하면 어떻게 되나요?"
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 39,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "아니요, 파일을 다운로드하기 전에는 파일을 검사할 수 없지만, NordVPN의 바이러스 및 위협 방지 Pro 기능을 사용하면 다운로드하는 동안 파일을 검사할 수 있습니다. 바이러스 및 위협 방지 Pro는 다운로드하는 각 파일에 알려진 멀웨어 서명이 있는지 자동으로 검사하고 안전하지 않은 것으로 확인되면 해당 파일의 실행을 중지합니다."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 40,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "NordVPN의 무료 파일 검사기 도구로는 한 번에 파일 한 개만 업로드할 수 있지만, NordVPN의 바이러스 및 위협 방지 Pro 기능은 다운로드하는 파일 수에 상관없이 쉽게 검사할 수 있습니다."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 41,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "네, PDF 파일에 바이러스가 있을 수 있습니다. 하지만 바이러스가 포함된 PDF 문서는 실제 PDF 파일이 아니라 이중 확장자를 사용하여 PDF로 위장한 실행 파일인 경우가 많습니다."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 42,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "네, 모든 유형의 파일을 NordVPN의 파일 검사기에 전송할 수 있습니다. 사용자 장치에서 파일이 사라지는 것이 아닌, 파일 검사기에 파일의 해시를 업로드하여 멀웨어 서명을 검사한다는 점을 기억하세요."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 43,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "특정 파일에 바이러스가 있는 것을 발견하면 파일을 열지 말고 즉시 삭제하세요. 그런 다음, 평판이 좋은 바이러스 백신 도구를 사용하여 시스템의 감염 여부를 철저히 검사하고 잠재적인 반복 메커니즘이나 실행된 악성 스크립트를 제거하세요."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 44,
+        "tag": "section",
+        "role": "content",
+        "subrole": null,
+        "confidence": 0.3,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        },
+        "buttonCount": 0,
+        "cardCount": 0,
+        "slots": {
+          "lede": "대부분의 경우, 감염된 파일을 다운로드하는 것만으로 시스템이 자동으로 손상되지는 않습니다. 대부분의 멀웨어는 실행 파일에 연결되어 있어 파일을 열기 전까지는 손상되지 않습니다. 그러나 일부 파일은 다운로드하면 자동 실행되도록 설정되어 있어 사용자도 모르는 사이에 감염될 수 있습니다. 따라서 파일을 다운로드하는 동안 멀웨어를 방지하려면 NordVPN의 바이러스 및 위협 방지 Pro 사용을 권장합니다."
+        },
+        "needsSmart": true
+      },
+      {
+        "index": 45,
+        "tag": "footer",
+        "role": "footer",
+        "subrole": null,
+        "confidence": 0.95,
+        "heading": null,
+        "bounds": {
+          "x": 0,
+          "y": 5109.84375,
+          "w": 1280,
+          "h": 796
+        },
+        "buttonCount": 9,
+        "cardCount": 34,
+        "slots": {
+          "ctaCount": 9,
+          "lede": "NordVPN의 SNS"
+        },
+        "needsSmart": false
+      }
+    ],
+    "counts": {
+      "nav": 16,
+      "content": 26,
+      "hero": 2,
+      "sidebar": 1,
+      "footer": 1
+    },
+    "readingOrder": [
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "content",
+      "content",
+      "content",
+      "content",
+      "content",
+      "nav",
+      "content",
+      "nav",
+      "content",
+      "hero",
+      "sidebar",
+      "content",
+      "content",
+      "content",
+      "content",
+      "hero",
+      "content",
+      "footer"
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+Clone the design language of this unknown page and build a fresh equivalent.
+Visual feel: flat. Tone: neutral · Headings: all-lowercase · CTA verbs: [object Object], [object Object]
+Primary palette: #2a2a2d, #f7f7f8, #4f5054, #3e5fff, #000000.
+Typography: [object Object], [object Object].
+Corner radius vocabulary: 6, 12, 20, 9999.
+Shadow vocabulary: rgba(42, 43, 50, 0.07) 0px 0px 0px 1px, rgba(42, 43, 50, 0.12) 0px 15px 20px 1px | rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(56, 60, 67, 0.07) 0px 0px 0px 1px, rgba(56, 60, 67, 0.15) 0px 3px 6px 0px.
+Use: Use plain Tailwind CSS without a component library.
+Page structure:
+- hero — heading: "이 파일은 안전한가요?"
+- sidebar
+- hero — heading: "파일 검사 이상의 보호"
+- footer

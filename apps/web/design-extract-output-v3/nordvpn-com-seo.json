@@ -1,0 +1,66 @@
+{
+  "openGraph": {
+    "url": "https://nordvpn.com/ko/file-checker/",
+    "type": "website",
+    "title": "파일 검사기: 파일 바이러스 유무 검사",
+    "locale": "ko_KR",
+    "description": "다운로드한 파일의 바이러스 감염 여부가 우려되시나요? NordVPN의 무료 온라인 파일 검사기 도구를 사용하여 알려진 멀웨어 서명이 있는지 검사하세요.",
+    "site_name": "NordVPN",
+    "image": "https://ic.nordcdn.com/v1/https://sb.nordcdn.com/m/576e7f7ee7c1bdc2/original/main",
+    "image:secure_url": "https://ic.nordcdn.com/v1/https://sb.nordcdn.com/m/576e7f7ee7c1bdc2/original/main"
+  },
+  "twitter": {
+    "site": "@NordVPN",
+    "card": "summary",
+    "title": "파일 검사기: 파일 바이러스 유무 검사",
+    "description": "다운로드한 파일의 바이러스 감염 여부가 우려되시나요? NordVPN의 무료 온라인 파일 검사기 도구를 사용하여 알려진 멀웨어 서명이 있는지 검사하세요.",
+    "image": "https://ic.nordcdn.com/v1/https://sb.nordcdn.com/m/576e7f7ee7c1bdc2/original/main"
+  },
+  "description": "다운로드한 파일의 바이러스 감염 여부가 우려되시나요? NordVPN의 무료 온라인 파일 검사기 도구를 사용하여 알려진 멀웨어 서명이 있는지 검사하세요.",
+  "canonical": null,
+  "themeColor": null,
+  "viewport": "width=device-width, initial-scale=1.0, viewport-fit=cover",
+  "favicons": [
+    {
+      "rel": "icon",
+      "href": "https://nordvpn.com/favicon.ico",
+      "sizes": "any",
+      "type": ""
+    },
+    {
+      "rel": "icon",
+      "href": "https://nordvpn.com/favicon.png",
+      "sizes": "",
+      "type": "image/svg+xml"
+    },
+    {
+      "rel": "apple-touch-icon",
+      "href": "https://nordvpn.com/apple-touch-icon-57x57.png",
+      "sizes": "57x57",
+      "type": ""
+    },
+    {
+      "rel": "apple-touch-icon",
+      "href": "https://nordvpn.com/apple-touch-icon-180x180.png",
+      "sizes": "180x180",
+      "type": ""
+    }
+  ],
+  "manifest": null,
+  "structuredData": [
+    {
+      "type": "Thing",
+      "name": null,
+      "sample": "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Organization\",\"@id\":\"https://nordvpn.com/#organization\",\"name\":\"NordVPN\",\"description\":\"NordVPN is a global cybersecurity leader, committed to providing secure, private, and unrestricted access to the internet for all users.\",\"url\":\"https://nordvpn.com/\",\"logo\":{\"@type\":\"ImageObject\",\"url\":\"https://ic.nordcdn.com/v1/q_70/https://sb.nordcdn.com/m"
+    }
+  ],
+  "score": {
+    "hasOg": true,
+    "hasTwitter": true,
+    "hasDescription": true,
+    "hasCanonical": false,
+    "hasStructuredData": true,
+    "hasFavicon": true,
+    "hasThemeColor": false
+  }
+}

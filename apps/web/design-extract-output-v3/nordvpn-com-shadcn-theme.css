@@ -1,0 +1,19 @@
+/* shadcn/ui Theme — extracted from https://nordvpn.com/ko/link-checker/ */
+/* Paste into your globals.css */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --primary: 230 100% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 5 76% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --accent: 221 83% 53%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 240 2% 8%;
+    --muted-foreground: 240 3% 17%;
+    --border: 220 3% 79%;
+    --radius: 6px;
+  }
+}
