@@ -1,6 +1,22 @@
 import "./globals.css";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Inter, Noto_Sans_KR } from "next/font/google";
+
+// NordVPN 디자인 토큰의 타이포(Inter + 한글 Noto Sans KR)를 self-host로 로드
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const notoSansKr = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-noto-sans-kr",
+  display: "swap",
+});
 
 export const metadata = {
   title: "OmniGuard",
@@ -13,12 +29,14 @@ export default function RootLayout({
   children: ReactNode;
 }): ReactNode {
   return (
-    <html lang="ko">
+    <html lang="ko" className={`${inter.variable} ${notoSansKr.variable}`}>
       <body>
         <header>
           <nav aria-label="주요 메뉴">
-            <span className="brand">OmniGuard</span>
-            <Link href="/">대시보드</Link>
+            <Link href="/" className="brand">
+              OmniGuard
+            </Link>
+            <Link href="/dashboard">대시보드</Link>
             <Link href="/services">서비스</Link>
             <Link href="/assets">자산</Link>
             <Link href="/findings">발견</Link>

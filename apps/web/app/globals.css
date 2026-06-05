@@ -1,15 +1,44 @@
 :root {
-  --bg: #0f1116;
-  --panel: #1a1d27;
-  --border: #2a2f3d;
-  --text: #e6e8ee;
-  --muted: #9aa3b2;
-  --accent: #5b8def;
-  --crit: #e5484d;
-  --high: #e8833a;
-  --med: #e0b341;
-  --low: #4f9d69;
-  --info: #6b7280;
+  color-scheme: light;
+
+  /* Surfaces — NordVPN 라이트 테마 */
+  --bg: #f7f7f8; /* neutral-100, 앱 캔버스 */
+  --panel: #ffffff; /* 카드/헤더 흰색 */
+  --border: #e2e2e4; /* neutral-200 */
+  --text: #2a2a2d; /* neutral-900 */
+  --muted: #696a6d; /* neutral-600 */
+
+  /* Brand — NordVPN 블루 (차용) */
+  --accent: #3e5fff;
+  --accent-hover: #6b90fa;
+  --accent-active: #243dcc;
+
+  /* Severity — NordVPN semantic 팔레트로 매핑 */
+  --crit: #e02f1f; /* NordVPN critical (red-600) */
+  --high: #f0833a; /* 파생: NordVPN 팔레트에 오렌지 없음 → red↔yellow 중간값 */
+  --med: #fac900; /* NordVPN warning (yellow) */
+  --low: #0a8550; /* NordVPN success (green-600) */
+  --info: #696a6d; /* NordVPN neutral-600 */
+
+  /* Typography — NordVPN: Inter + 한글 Noto Sans KR */
+  --font-sans: var(--font-inter), var(--font-noto-sans-kr), "Inter", "Noto Sans KR",
+    system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Radius — NordVPN 스케일 */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  /* Shadow — NordVPN */
+  --shadow-sm: rgba(56, 60, 67, 0.07) 0 0 0 1px, rgba(56, 60, 67, 0.15) 0 3px 6px 0;
+
+  /* Motion — NordVPN */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 0.15s;
+  --duration-medium: 0.25s;
+  --duration-slow: 0.4s;
 }
 
 * {
@@ -20,13 +49,14 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
 }
 
 header {
   border-bottom: 1px solid var(--border);
   background: var(--panel);
+  box-shadow: var(--shadow-sm);
 }
 
 nav {
@@ -76,8 +106,9 @@ h2 {
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .card .label {
@@ -121,7 +152,7 @@ th.num {
 .badge {
   display: inline-block;
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 700;
   color: #fff;
@@ -145,7 +176,7 @@ th.num {
 }
 
 .notice {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1rem;
   border: 1px solid var(--border);
   background: var(--panel);
@@ -166,9 +197,11 @@ th.num {
 
 .service {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 1rem 1.2rem 1.2rem;
   margin-top: 1.2rem;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
 }
 
 .service h2 {
@@ -207,11 +240,19 @@ th.num {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 0.5rem 0.6rem;
-  font-family: ui-monospace, "Cascadia Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   resize: vertical;
+}
+
+.scan-form textarea:focus,
+.scan-form select:focus,
+.scan-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(62, 95, 255, 0.25);
 }
 
 .scan-form button {
@@ -220,10 +261,19 @@ th.num {
   background: var(--accent);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-full);
   padding: 0.55rem 1.1rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.scan-form button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.scan-form button:active:not(:disabled) {
+  background: var(--accent-active);
 }
 
 .scan-form button:disabled {
@@ -233,4 +283,222 @@ th.num {
 
 .notice[role="status"] {
   border-color: var(--low);
+}
+
+/* ============================================================
+   Landing — NordVPN 랜딩 구조 (히어로 → 기능 → 동작 → CTA → 푸터)
+   ============================================================ */
+.landing {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* Buttons (랜딩 공용) */
+.btn {
+  display: inline-block;
+  border-radius: var(--radius-full);
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-primary:active {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+}
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover {
+  border-color: var(--accent);
+  background: #f3f7fc;
+}
+.btn-onaccent {
+  background: #fff;
+  color: var(--accent);
+  border: 1px solid #fff;
+}
+.btn-onaccent:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+/* Hero */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  padding: 3.5rem 1rem 1rem;
+}
+.hero-eyebrow {
+  background: #f3f7fc;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+}
+.hero-title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.hero-lede {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+/* Section title */
+.section-title {
+  margin: 0 0 2rem;
+  text-align: center;
+  font-size: 1.6rem;
+}
+
+/* Feature cards */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+}
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: #f3f7fc;
+  color: var(--accent);
+}
+.feature h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.feature p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* Steps */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.step h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.step p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* CTA band */
+.cta-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 3rem 2rem;
+}
+.cta-band h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+.cta-band p {
+  margin: 0;
+  max-width: 52ch;
+  opacity: 0.9;
+  line-height: 1.6;
+}
+
+/* Footer */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.site-footer nav {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  gap: 1.2rem;
+}
+.site-footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: var(--accent);
 }
