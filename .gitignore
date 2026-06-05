@@ -6,6 +6,10 @@ next-env.d.ts
 *.tsbuildinfo
 *.log
 .DS_Store
+
+# designlang 추출 산출물 (디자인 토큰 차용 후 참고용, 커밋 제외)
+design-extract-output*/
+
 .env
 .env.*
 !.env.example
