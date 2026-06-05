@@ -202,14 +202,35 @@ git log --oneline -6            # HEAD가 7ab4243(OSV CVSS 파싱 PR #8)인지
 > 현재 로컬 브랜치는 `main`만 있고 origin/main과 동기 상태(이전 작업 브랜치는 머지 후 삭제됨).
 
 **2) 직접 돌려보기**(선택, 로컬에서 실증 완료된 흐름):
+
+**포트 분리 필수**: API와 Next 둘 다 기본 3000이라 충돌한다. **터미널 2개**로 띄운다(VSCode면
+`Ctrl+\`` → 패널 `+`로 하나 더). API를 먼저 켜야 대시보드가 데이터를 불러온다.
+
+bash(Linux/macOS/Git Bash):
 ```bash
-# 포트 분리 필수: API와 Next 둘 다 기본 3000이라 충돌한다.
-pnpm serve                                                   # API :3000 (dev-token/admin)
-PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  # 대시보드 :3001
+# 터미널 A — API :3000 (dev-token/admin)
+pnpm serve
+# 터미널 B — 대시보드 :3001
+PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev
+```
+
+PowerShell(Windows / VSCode 기본 터미널 — `PORT=.. pnpm`은 PowerShell에서 파싱 에러라 `$env:`로 설정):
+```powershell
+# 터미널 A — API :3000
+cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
+pnpm serve
+# 터미널 B — 대시보드 :3001
+cd C:\Users\MZ01-PANGKIM\Desktop\AIO-TF
+$env:PORT="3001"
+$env:API_BASE_URL="http://127.0.0.1:3000"
+$env:API_TOKEN="dev-token"
+pnpm web:dev
+```
+```text
 # → http://localhost:3001/scan 에서 npm 폼에 {"name":"a","version":"1.0.0","dependencies":{"lodash":"4.17.4"}}
 #   넣고 실행하면 비동기 큐→OSV→점수→영속 후 /findings·/impact에 실제 취약점이 라이브로 뜬다.
 # 주의: API_BASE_URL은 127.0.0.1(IPv4)로 — localhost(::1)면 Next가 자기 자신을 호출한다.
-# 무DB(인메모리)라 재시작 시 데이터 소멸. 종료는 :3000/:3001 프로세스 kill.
+# 무DB(인메모리)라 재시작 시 데이터 소멸. 종료는 각 터미널 Ctrl+C(또는 :3000/:3001 프로세스 kill).
 ```
 
 **[최근 세션 메모, 2026-06-04]** 진행 보고용 자료를 별도로 제작했다(**레포 코드 변경 0줄**).

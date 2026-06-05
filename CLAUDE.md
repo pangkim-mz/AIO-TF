@@ -102,6 +102,9 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - **vitest flaky**: Windows Temp transform 캐시에서 가끔 `UNKNOWN` 오류로 일부 파일 미실행 → **재실행하면 정상**.
 - Next 실행은 pnpm 구조상 `apps/web`에서 `node node_modules/next/dist/bin/next start`
   (루트 `.bin/next` 셸심은 실패). `pnpm web:dev`/`web:build`는 정상.
+- **로컬 구동 env는 PowerShell 문법으로**: `PORT=3001 ... pnpm web:dev`(bash)는 PowerShell에서
+  파싱 에러 → `$env:PORT="3001"; $env:API_BASE_URL="http://127.0.0.1:3000"; $env:API_TOKEN="dev-token"; pnpm web:dev`.
+  API(:3000)와 대시보드(:3001)는 **별도 터미널 2개**로, API를 먼저 띄운다(구동 절차는 README·PROJECT_NOTES §6에 bash·PS 병기).
 
 ## 컨벤션
 
