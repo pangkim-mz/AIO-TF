@@ -6,6 +6,9 @@ import {
   newId,
   now,
 } from "@omniguard/schema";
+import { cvssFromSeverities, severityFromCvss } from "./cvss";
+
+export { parseCvssVector, cvssFromSeverities, severityFromCvss } from "./cvss";
 
 const SOURCE_ID = "enrich-osv";
 const OSV_QUERY_URL = "https://api.osv.dev/v1/query";
@@ -124,8 +127,13 @@ async function mapLimit<T, R>(
 }
 
 function toFinding(vuln: OsvVuln, asset: Asset, tenantId: string): Finding {
-  const label = vuln.database_specific?.severity;
   const timestamp = now();
+  // CVSS 숫자 점수가 있으면 그 구간으로 정밀하게, 없으면 GHSA 텍스트 라벨로 폴백.
+  const cvss = cvssFromSeverities(vuln.severity);
+  const severity =
+    cvss !== null
+      ? severityFromCvss(cvss)
+      : normalizeSeverity(vuln.database_specific?.severity);
   return {
     id: newId(),
     tenantId,
@@ -137,8 +145,8 @@ function toFinding(vuln: OsvVuln, asset: Asset, tenantId: string): Finding {
     sourceFindingId: vuln.id,
     title: vuln.summary ?? vuln.id,
     description: vuln.details ?? "",
-    severity: normalizeSeverity(label),
-    cvss: null,
+    severity,
+    cvss,
     status: "open",
     detectedAt: timestamp,
     resolvedAt: null,
