@@ -181,6 +181,7 @@
 22. `6f8e840` 토큰 발급/폐기 API — admin 전용 `POST`/`GET`/`DELETE /v1/tokens`. `TokenStore`에 `listByTenant` 추가(InMemory·Postgres + 계약 테스트). tenantId를 발급자 principal에서 가져와 타 테넌트 토큰 발급/조회/폐기 차단. 발급 시 원문 1회 노출 후 sha256 해시만 저장. index.ts를 양쪽 모드 모두 `DbAuthProvider`+`TokenStore`로 통일(무DB 모드도 발급 가능) — D8 확장. PR #5(squash 머지, CI build-test·postgres green).
 23. `3cda948` docs — PROJECT_NOTES에 토큰 발급 API(#5) 머지 결과 반영. PR #6.
 24. `7ab4243` OSV CVSS 숫자 점수 파싱 — `enrich-osv/src/cvss.ts`(순수 함수)가 CVSS v3.0/v3.1 벡터를 명세 그대로 Base Score(0–10)로 계산. `Finding.cvss`를 채우고, 점수가 있으면 정성 등급 구간으로 severity를 정밀화(없으면 기존 GHSA 텍스트 라벨로 폴백). 의존성 0(공식 직접 구현), 코어(`schema`/`scoring`/`graph`/`storage`) 0줄 — `Finding.cvss` 필드는 원래 스키마에 있었음. 단위 테스트 12건 추가(123 passed). v2/v4는 미지원→텍스트 폴백(§7). PR #8(squash 머지).
+25. `8b7250f` 큐 재시도·리스 회수 — 일시 실패를 지수 백오프로 재시도(`Job.availableAt`+`retry`, 기본 3회·base 1s·2^n), 워커 크래시로 멈춘 `running` 잡을 리스 만료(`claimNext({leaseMs})`, 기본 5분) 기준으로 회수. `runScanJob` 멱등이라 회수 중복 실행 안전. Postgres는 `FOR UPDATE SKIP LOCKED` 유지, 시각 비교는 ISO 문자열 사전순. 마이그레이션 `004_job_retry.sql`(available_at+인덱스). 양 어댑터 계약 + 워커 단위 테스트. 코어 0줄(129 passed) — D9 확장(§2). 데드레터·별도 워커 프로세스는 미구현(§7).
 
 ---
 
