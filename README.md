@@ -68,7 +68,7 @@ $env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service
   score=findingId). 재스캔해도 중복 없이 `id`/`firstSeen`을 보존한다.
 - **계약 테스트**: 동일 테스트를 두 어댑터에 적용. Postgres는 `DATABASE_URL`이 있을 때만 실행.
 
-마이그레이션: `packages/storage/migrations/*.sql`(001 코어 · 002 인증 토큰 · 003 작업 큐).
+마이그레이션: `packages/storage/migrations/*.sql`(001 코어 · 002 인증 토큰 · 003 작업 큐 · 004 큐 재시도).
 파일명 순으로 자동 적용되며, `applyMigrations`는 advisory lock으로 동시 실행을 직렬화한다(다중 인스턴스 부팅 안전).
 
 ## 영향도 전파 (Asset Graph)
@@ -129,11 +129,21 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 
 Next.js App Router. 서버 컴포넌트가 API를 호출해 렌더한다(토큰은 서버 환경변수, 클라이언트 비노출).
 
+**터미널 2개**로 띄운다(API를 먼저). 환경변수: `API_BASE_URL`(기본 `http://localhost:3000`), `API_TOKEN`(기본 `dev-token`).
+
+bash(Linux/macOS/Git Bash):
 ```bash
-pnpm serve        # API (별도 터미널, 포트 3000)
-pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으로 자동 이동)
-# 환경변수: API_BASE_URL(기본 http://localhost:3000), API_TOKEN(기본 dev-token)
+pnpm serve                                                                    # 터미널 A — API :3000
+PORT=3001 API_BASE_URL=http://127.0.0.1:3000 API_TOKEN=dev-token pnpm web:dev  # 터미널 B — 대시보드 :3001
 ```
+
+PowerShell(Windows / VSCode 기본 터미널 — `PORT=.. pnpm`은 파싱 에러라 `$env:`로 설정):
+```powershell
+pnpm serve                              # 터미널 A — API :3000
+# 터미널 B — 대시보드 :3001
+$env:PORT="3001"; $env:API_BASE_URL="http://127.0.0.1:3000"; $env:API_TOKEN="dev-token"; pnpm web:dev
+```
+> `API_BASE_URL`은 `127.0.0.1`(IPv4)로 — `localhost`(::1)면 Next가 자기 자신을 호출한다.
 
 - 페이지: 대시보드(요약+상위 발견/영향도), **서비스(교차 도메인 통합 리스크)**, 자산,
   발견(심각도순), 영향도(전파/근원), 스캔(서버 액션으로 화면에서 직접 npm/벤더 스캔 실행 → 성공 시 조회 페이지 재검증).
@@ -165,4 +175,5 @@ pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으
 
 - `yarn.lock`은 미지원(현재 npm/pnpm lockfile만). 없으면 레인지 폴백.
 - OSV CVSS 숫자 점수 파싱은 v3.0/v3.1만 지원. v2·v4는 미계산→GHSA 텍스트 심각도 라벨 폴백.
-- 작업 큐는 자체 구현(인프로세스 워커 + 자체 클레임). 재시도/스케줄/데드레터 등 고급 기능은 미구현.
+- 작업 큐는 자체 구현(인프로세스 워커 + 자체 클레임). 일시 실패 **지수 백오프 재시도**(기본 3회)와
+  워커 크래시 시 **리스 기반 stuck 잡 회수**(기본 5분)는 지원. 데드레터(DLQ)·별도 워커 프로세스 분리는 미구현.

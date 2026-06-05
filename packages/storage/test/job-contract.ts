@@ -80,5 +80,42 @@ export function jobQueueContract(
       expect(done!.error).toBe("OSV 호출 실패");
       expect(done!.result).toBeNull();
     });
+
+    it("retry는 queued로 되돌리고 availableAt 전에는 클레임되지 않는다(백오프)", async () => {
+      const tenant = newId();
+      const job = await queue.enqueue({ tenantId: tenant, type: "npm", payload: {} });
+      await queue.claimNext(); // attempts=1, running
+      const future = "2999-01-01T00:00:00.000Z";
+      await queue.retry(job.id, "일시 오류", future);
+
+      const requeued = await queue.getJob(tenant, job.id);
+      expect(requeued!.status).toBe("queued");
+      expect(requeued!.error).toBe("일시 오류");
+
+      // 백오프 시각 전에는 다시 잡히지 않는다.
+      expect(await queue.claimNext()).toBeNull();
+      // 백오프 시각이 지나면 다시 잡히고 attempts가 누적된다.
+      const reclaimed = await queue.claimNext({ now: "2999-01-01T00:00:01.000Z" });
+      expect(reclaimed!.id).toBe(job.id);
+      expect(reclaimed!.attempts).toBe(2);
+    });
+
+    it("leaseMs를 주면 멈춘 running 작업을 회수하고, 안 주면 회수하지 않는다", async () => {
+      const tenant = newId();
+      const job = await queue.enqueue({ tenantId: tenant, type: "npm", payload: {} });
+      const claimed = await queue.claimNext(); // running, attempts=1 (워커가 처리 중 크래시했다고 가정)
+      expect(claimed!.status).toBe("running");
+
+      // leaseMs 미지정: running은 회수되지 않는다.
+      expect(await queue.claimNext()).toBeNull();
+
+      // leaseMs 지정 + 리스 만료(미래 시각): 같은 작업을 회수해 재클레임한다.
+      const recovered = await queue.claimNext({
+        leaseMs: 1,
+        now: "2999-01-01T00:00:00.000Z",
+      });
+      expect(recovered!.id).toBe(job.id);
+      expect(recovered!.attempts).toBe(2);
+    });
   });
 }
