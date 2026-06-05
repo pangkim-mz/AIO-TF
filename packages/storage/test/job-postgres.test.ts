@@ -36,9 +36,10 @@ if (!url) {
     return {
       enqueue: (j) => base.enqueue(j),
       getJob: (t, id) => base.getJob(t, id),
-      claimNext: () => base.claimNext(),
+      claimNext: (opts) => base.claimNext(opts),
       complete: (id, r) => base.complete(id, r),
       fail: (id, e) => base.fail(id, e),
+      retry: (id, e, at) => base.retry(id, e, at),
       close: async () => {},
     };
   });

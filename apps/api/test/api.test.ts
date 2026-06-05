@@ -54,10 +54,15 @@ const stubEnrich: Enricher = async (assets, tenantId) => {
   return [finding];
 };
 
-function makeSetup(enrich?: Enricher) {
+function makeSetup(enrich?: Enricher, workerOpts?: { maxAttempts?: number; retryBaseMs?: number }) {
   const repo = new InMemoryRepository();
   const queue = new InMemoryJobQueue();
-  const worker = new ScanWorker({ queue, repo, enrich: enrich ?? (async () => []) });
+  const worker = new ScanWorker({
+    queue,
+    repo,
+    enrich: enrich ?? (async () => []),
+    ...workerOpts,
+  });
   const app = buildServer({
     repo,
     queue,
@@ -271,11 +276,13 @@ describe("OmniGuard API (비동기 스캔)", () => {
     expect(row.rootCause).toBe("lodash");
   });
 
-  it("스캔 처리 중 오류는 작업을 failed로 만든다", async () => {
+  it("재시도를 모두 소진한 스캔 오류는 작업을 failed로 만든다", async () => {
     const boom: Enricher = async () => {
       throw new Error("OSV 폭발");
     };
-    ({ app, worker } = makeSetup(boom));
+    // maxAttempts=1: 재시도 없이 한 번 실패하면 곧장 영구 실패.
+    // (재시도→성공/소진 동작은 worker.test.ts에서 결정론적으로 검증한다.)
+    ({ app, worker } = makeSetup(boom, { maxAttempts: 1 }));
     const { job } = await runScan(app, worker, "/v1/scans/npm", { packageJson: PKG_JSON });
     expect(job.status).toBe("failed");
     expect(job.error).toBe("OSV 폭발");

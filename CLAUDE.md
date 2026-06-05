@@ -51,6 +51,12 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 포트(InMemory·Postgres). Postgres는 `FOR UPDATE SKIP LOCKED`로 클레임, `job` 테이블은 워커가
 전 테넌트를 처리하므로 **RLS 비대상**(getJob만 코드레벨 tenant 필터). FIFO 보장은 `seq`(bigserial).
 
+큐 재시도/회수: 일시 실패는 영구 실패시키지 않고 **지수 백오프** 재시도한다. `Job.availableAt`
+(이 시각 이후만 클레임)을 두고, 워커가 `attempts < maxAttempts`(기본 3)면 `retry(jobId, error, nextRetryAt)`
+(base 1s·2^n)로 큐에 되돌린다. 워커 크래시로 `running`에 멈춘 잡은 `claimNext({leaseMs})`(기본 5분)가
+`updatedAt` 리스 만료 기준으로 회수한다. `runScanJob`이 **멱등**이라 중복 실행이 안전한 게 회수의 전제.
+시각 비교는 ISO 문자열 사전순(`now()`=`toISOString()`)으로 처리. 마이그레이션 `004_job_retry.sql`.
+
 도메인 간 통합: `service` 자산이 `depends_on`(→패키지)·`hosted_on`(→클라우드)·`provided_by`(→벤더)
 엣지로 세 도메인을 가로지른다. `buildTopology`가 기존 자산을 자연키로 조회해 연결 →
 서비스 영향도가 모든 도메인 리스크의 통합 최악값이 된다(OmniGuard 최종 목적).
@@ -60,7 +66,7 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - 멀티테넌트: 코드 필터 + Postgres **RLS** 이중 방어. **운영은 비-슈퍼유저 역할로 접속해야**
   RLS가 강제됨(슈퍼유저 우회). 세션 변수 `omniguard.tenant_id`.
 - 멱등 upsert(자연키: asset=purl, finding=assetId+sourceFindingId, score=findingId). 재스캔 중복 없음.
-- 마이그레이션: `packages/storage/migrations/*.sql`(001 코어·002 토큰·003 작업큐, 파일명 순 자동 적용).
+- 마이그레이션: `packages/storage/migrations/*.sql`(001 코어·002 토큰·003 작업큐·004 큐 재시도, 파일명 순 자동 적용).
   `applyMigrations`는 advisory lock(`pg_advisory_lock`)으로 동시 실행을 직렬화한다 — `CREATE TABLE IF NOT EXISTS`가
   동시 실행에 원자적이지 않아(다중 인스턴스 부팅·병렬 테스트) `pg_type` 유니크 충돌이 났던 것을 막는다.
 
@@ -104,7 +110,7 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 ## 다음 단계 (로드맵 [예정])
 
-1. **큐 고도화** — 자체 인프로세스 워커 완료. 남은 것(선택): 재시도/백오프, 데드레터, 별도 워커 프로세스, 외부 큐.
+1. **큐 고도화** — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것(선택): 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
 2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
 
 완료: **OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),
@@ -113,6 +119,7 @@ CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. No
 **인증 DB 토큰화**(`TokenStore` 포트 + `DbAuthProvider`, sha256 해시, `002_api_token.sql`),
 **OIDC 하이브리드**(`OidcAuthProvider` + `CompositeAuthProvider`, jose, `OMNIGUARD_OIDC`),
 **스캔 비동기화**(`JobQueue` 포트 + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id`),
+**큐 재시도/회수**(지수 백오프 재시도 + 리스 기반 stuck 회수, `Job.availableAt`·`retry`·`claimNext({leaseMs})`, `004_job_retry.sql`),
 **토큰 발급/폐기 API**(admin 전용 `POST`/`GET`/`DELETE /v1/tokens`, `TokenStore.listByTenant` 추가,
 발급자 테넌트 범위, 원문 1회 노출·해시만 저장).
 

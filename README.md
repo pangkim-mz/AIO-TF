@@ -68,7 +68,7 @@ $env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service
   score=findingId). 재스캔해도 중복 없이 `id`/`firstSeen`을 보존한다.
 - **계약 테스트**: 동일 테스트를 두 어댑터에 적용. Postgres는 `DATABASE_URL`이 있을 때만 실행.
 
-마이그레이션: `packages/storage/migrations/*.sql`(001 코어 · 002 인증 토큰 · 003 작업 큐).
+마이그레이션: `packages/storage/migrations/*.sql`(001 코어 · 002 인증 토큰 · 003 작업 큐 · 004 큐 재시도).
 파일명 순으로 자동 적용되며, `applyMigrations`는 advisory lock으로 동시 실행을 직렬화한다(다중 인스턴스 부팅 안전).
 
 ## 영향도 전파 (Asset Graph)
@@ -165,4 +165,5 @@ pnpm web:dev      # 대시보드 (포트 3000 → 충돌 시 next가 3001 등으
 
 - `yarn.lock`은 미지원(현재 npm/pnpm lockfile만). 없으면 레인지 폴백.
 - OSV CVSS 숫자 점수 파싱은 v3.0/v3.1만 지원. v2·v4는 미계산→GHSA 텍스트 심각도 라벨 폴백.
-- 작업 큐는 자체 구현(인프로세스 워커 + 자체 클레임). 재시도/스케줄/데드레터 등 고급 기능은 미구현.
+- 작업 큐는 자체 구현(인프로세스 워커 + 자체 클레임). 일시 실패 **지수 백오프 재시도**(기본 3회)와
+  워커 크래시 시 **리스 기반 stuck 잡 회수**(기본 5분)는 지원. 데드레터(DLQ)·별도 워커 프로세스 분리는 미구현.

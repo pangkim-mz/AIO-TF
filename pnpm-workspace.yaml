@@ -3,4 +3,5 @@ packages:
   - "apps/*"
 # esbuild는 플랫폼 바이너리로 동작하므로 빌드 스크립트를 의도적으로 비실행(pnpm 11 strictDepBuilds 대응)
 allowBuilds:
+  designlang: true
   esbuild: false

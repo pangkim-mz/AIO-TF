@@ -13,7 +13,7 @@ import {
 } from "@omniguard/schema";
 import { type Repository, assetIdentifier } from "./port";
 import type { StoredToken, TokenStore } from "./token";
-import type { EnqueueJob, Job, JobQueue, JobStatus, JobType } from "./job";
+import type { ClaimOptions, EnqueueJob, Job, JobQueue, JobStatus, JobType } from "./job";
 
 export type PostgresOptions =
   | { connectionString: string }
@@ -323,6 +323,7 @@ interface JobRow {
   result: unknown;
   error: string | null;
   attempts: number;
+  available_at: string;
   created_at: string;
   updated_at: string;
 }
@@ -337,13 +338,14 @@ function rowToJob(row: JobRow): Job {
     result: row.result ?? null,
     error: row.error,
     attempts: row.attempts,
+    availableAt: row.available_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 const JOB_COLUMNS =
-  "id, tenant_id, type, status, payload, result, error, attempts, created_at, updated_at";
+  "id, tenant_id, type, status, payload, result, error, attempts, available_at, created_at, updated_at";
 
 /**
  * PostgreSQL 비동기 스캔 작업 큐. control-plane이라 테넌트 세션 변수 없이 질의한다.
@@ -362,8 +364,8 @@ export class PostgresJobQueue implements JobQueue {
   async enqueue(input: EnqueueJob): Promise<Job> {
     const ts = now();
     const { rows } = await this.pool.query<JobRow>(
-      `insert into job (id, tenant_id, type, status, payload, attempts, created_at, updated_at)
-       values ($1, $2, $3, 'queued', $4::jsonb, 0, $5, $5)
+      `insert into job (id, tenant_id, type, status, payload, attempts, available_at, created_at, updated_at)
+       values ($1, $2, $3, 'queued', $4::jsonb, 0, $5, $5, $5)
        returning ${JOB_COLUMNS}`,
       [newId(), input.tenantId, input.type, JSON.stringify(input.payload), ts],
     );
@@ -378,17 +380,26 @@ export class PostgresJobQueue implements JobQueue {
     return rows[0] ? rowToJob(rows[0]) : null;
   }
 
-  async claimNext(): Promise<Job | null> {
+  async claimNext(options?: ClaimOptions): Promise<Job | null> {
+    const nowIso = options?.now ?? now();
+    // 리스 만료 컷오프. leaseMs 미지정 시 ''로 둬 running 회수를 끈다
+    // (updated_at은 비지 않은 ISO 문자열이라 <= '' 는 항상 거짓).
+    const cutoff =
+      options?.leaseMs === undefined
+        ? ""
+        : new Date(new Date(nowIso).getTime() - options.leaseMs).toISOString();
     const { rows } = await this.pool.query<JobRow>(
       `update job set status = 'running', attempts = attempts + 1, updated_at = $1
        where id = (
-         select id from job where status = 'queued'
+         select id from job
+         where (status = 'queued' and available_at <= $1)
+            or (status = 'running' and updated_at <= $2)
          order by seq
          for update skip locked
          limit 1
        )
        returning ${JOB_COLUMNS}`,
-      [now()],
+      [nowIso, cutoff],
     );
     return rows[0] ? rowToJob(rows[0]) : null;
   }
@@ -399,6 +410,17 @@ export class PostgresJobQueue implements JobQueue {
 
   async fail(jobId: string, error: string): Promise<Job> {
     return this.finish(jobId, "failed", { result: null, error });
+  }
+
+  async retry(jobId: string, error: string, availableAt: string): Promise<Job> {
+    const { rows } = await this.pool.query<JobRow>(
+      `update job set status = 'queued', error = $2, available_at = $3, updated_at = $4
+       where id = $1
+       returning ${JOB_COLUMNS}`,
+      [jobId, error, availableAt, now()],
+    );
+    if (!rows[0]) throw new Error(`알 수 없는 작업: ${jobId}`);
+    return rowToJob(rows[0]);
   }
 
   private async finish(
