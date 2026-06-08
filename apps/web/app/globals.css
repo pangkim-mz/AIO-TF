@@ -536,3 +536,133 @@ th.num {
 .site-footer a:hover {
   color: var(--accent);
 }
+
+/* ── 펼침형 발견 테이블 ───────────────────────────────────── */
+.findings-table .caret-cell {
+  width: 2.2rem;
+  text-align: center;
+}
+.findings-table .mono {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+.caret {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.7rem;
+  padding: 0.2rem;
+  line-height: 1;
+}
+.finding-row {
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+.finding-row:hover {
+  background-color: var(--bg);
+}
+.finding-row.open {
+  background-color: var(--bg);
+}
+.finding-row.open td {
+  border-bottom: none;
+}
+.finding-detail-row > td {
+  padding: 0;
+  background-color: var(--bg);
+}
+.finding-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  padding: 1.1rem 1.2rem 1.3rem;
+  border-bottom: 2px solid var(--accent);
+}
+.finding-detail-grid h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.finding-detail-grid section > p {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+.score-headline {
+  margin: 0 0 0.5rem !important;
+}
+.score-headline strong {
+  font-size: 1.3rem;
+  color: var(--accent);
+}
+/* 위험 점수 기여 분해 */
+.factor-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.factor-list li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.factor-bar {
+  height: 0.5rem;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.factor-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}
+.factor-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* 대상 자산 key-value */
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+.kv dt {
+  color: var(--muted);
+}
+.kv dd {
+  margin: 0;
+}
+/* 영향 전파 목록 */
+.impacted-list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.impacted-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px dashed var(--border);
+}
+.impact-score {
+  color: var(--high);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

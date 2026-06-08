@@ -1,20 +1,23 @@
 import type { ReactNode } from "react";
 import { serverClient } from "../../lib/server-client";
-import { sortFindingsBySeverity, summarize } from "../../lib/format";
-import { EmptyNotice, ErrorNotice, SeverityBadge, StatCard } from "../components";
+import { summarize } from "../../lib/format";
+import { buildFindingDetails } from "../../lib/findings";
+import { EmptyNotice, ErrorNotice, StatCard } from "../components";
+import { FindingsTable } from "../findings-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage(): Promise<ReactNode> {
   const client = serverClient();
   try {
-    const [assets, findings, impact] = await Promise.all([
+    const [assets, findings, scores, impact] = await Promise.all([
       client.getAssets(),
       client.getFindings(),
+      client.getScores(),
       client.getImpact(),
     ]);
     const summary = summarize(assets.length, findings, impact);
-    const topFindings = sortFindingsBySeverity(findings).slice(0, 5);
+    const topFindings = buildFindingDetails(findings, assets, scores, impact).slice(0, 5);
     const topImpact = [...impact]
       .sort((a, b) => b.impactScore - a.impactScore)
       .slice(0, 5);
@@ -31,31 +34,11 @@ export default async function DashboardPage(): Promise<ReactNode> {
         </div>
 
         <h2>상위 발견 (심각도순)</h2>
+        <p className="muted">행을 클릭하면 설명·위험 점수 분해·영향 전파를 펼쳐 볼 수 있습니다.</p>
         {topFindings.length === 0 ? (
           <EmptyNotice message="발견이 없습니다. 스캔을 먼저 실행하세요." />
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">심각도</th>
-                <th scope="col">분류</th>
-                <th scope="col">발견 ID</th>
-                <th scope="col">제목</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topFindings.map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <SeverityBadge severity={f.severity} />
-                  </td>
-                  <td>{f.category}</td>
-                  <td>{f.sourceFindingId}</td>
-                  <td>{f.title}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <FindingsTable rows={topFindings} />
         )}
 
         <h2>상위 영향도 (그래프 전파)</h2>
