@@ -27,17 +27,17 @@ function FactorBars({ factors }: { factors: RiskFactor[] }): ReactNode {
     <ul className="factor-list">
       {factors.map((f) => (
         <li key={f.name}>
-          <span className="factor-name">{FACTOR_LABEL[f.name] ?? f.name}</span>
+          <div className="factor-head">
+            <span className="factor-name">{FACTOR_LABEL[f.name] ?? f.name}</span>
+            <span className="factor-num">+{Math.round(f.contribution)}</span>
+          </div>
           <span className="factor-bar" aria-hidden>
             <span
               className="factor-fill"
               style={{ width: `${Math.round((f.contribution / max) * 100)}%` }}
             />
           </span>
-          <span className="factor-num">
-            {Math.round(f.contribution)}
-            <span className="muted"> (값 {f.value} × 가중치 {f.weight})</span>
-          </span>
+          <span className="factor-sub muted">값 {f.value} × 가중치 {f.weight}</span>
         </li>
       ))}
     </ul>
@@ -46,62 +46,74 @@ function FactorBars({ factors }: { factors: RiskFactor[] }): ReactNode {
 
 function DetailPanel({ row }: { row: FindingDetail }): ReactNode {
   return (
-    <div className="finding-detail-grid">
-      <section>
-        <h4>설명</h4>
-        <p>{row.description?.trim() ? row.description : "추가 설명이 제공되지 않았습니다."}</p>
-      </section>
+    <div className="finding-detail">
+      {/* 강조 요약 바 — 심각도·CVE·CVSS·종합점수를 먼저 */}
+      <div className={`fd-summary sev-${row.severity}`}>
+        <SeverityBadge severity={row.severity} />
+        <span className="fd-summary-title">{row.title}</span>
+        <span className="fd-chips">
+          <span className="fd-chip mono">{row.sourceFindingId}</span>
+          {row.cvss !== null && (
+            <span className="fd-chip">CVSS {row.cvss.toFixed(1)}</span>
+          )}
+          {row.score !== null && (
+            <span className="fd-chip fd-chip-score">위험 {row.score}/100</span>
+          )}
+        </span>
+      </div>
 
-      <section>
-        <h4>위험 점수 분해</h4>
-        {row.score !== null ? (
-          <>
-            <p className="score-headline">
-              종합 <strong>{row.score}</strong> / 100
-            </p>
+      <div className="fd-cards">
+        <section className="fd-card fd-card-wide">
+          <h4>설명</h4>
+          <p>{row.description?.trim() ? row.description : "추가 설명이 제공되지 않았습니다."}</p>
+        </section>
+
+        <section className="fd-card">
+          <h4>위험 점수 분해</h4>
+          {row.score !== null ? (
             <FactorBars factors={row.factors} />
-          </>
-        ) : (
-          <p className="muted">점수가 아직 산정되지 않았습니다.</p>
-        )}
-      </section>
+          ) : (
+            <p className="muted">점수가 아직 산정되지 않았습니다.</p>
+          )}
+        </section>
 
-      <section>
-        <h4>대상 자산</h4>
-        <dl className="kv">
-          <dt>이름</dt>
-          <dd>{row.assetName}</dd>
-          <dt>종류</dt>
-          <dd>{ASSET_TYPE_LABEL[row.assetType] ?? row.assetType}</dd>
-          <dt>CVSS</dt>
-          <dd>{row.cvss !== null ? row.cvss.toFixed(1) : "—"}</dd>
-          <dt>상태</dt>
-          <dd>{row.status}</dd>
-          <dt>탐지 시각</dt>
-          <dd>{new Date(row.detectedAt).toLocaleString("ko-KR")}</dd>
-        </dl>
-      </section>
+        <section className="fd-card">
+          <h4>대상 자산</h4>
+          <dl className="kv">
+            <dt>이름</dt>
+            <dd>{row.assetName}</dd>
+            <dt>종류</dt>
+            <dd>{ASSET_TYPE_LABEL[row.assetType] ?? row.assetType}</dd>
+            <dt>CVSS</dt>
+            <dd>{row.cvss !== null ? row.cvss.toFixed(1) : "—"}</dd>
+            <dt>상태</dt>
+            <dd>{row.status}</dd>
+            <dt>탐지</dt>
+            <dd>{new Date(row.detectedAt).toLocaleString("ko-KR")}</dd>
+          </dl>
+        </section>
 
-      <section>
-        <h4>미치는 영향 (그래프 전파)</h4>
-        {row.impacted.length > 0 ? (
-          <>
-            <p className="muted">
-              이 자산을 근원으로 위험을 상속한 하위 자산 {row.impacted.length}개:
-            </p>
-            <ul className="impacted-list">
-              {row.impacted.map((i) => (
-                <li key={i.asset}>
-                  <span>{i.asset}</span>
-                  <span className="impact-score">영향도 {i.impactScore}</span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="muted">이 발견이 전파한 하위 자산은 없습니다(직접 위험).</p>
-        )}
-      </section>
+        <section className="fd-card">
+          <h4>미치는 영향 (그래프 전파)</h4>
+          {row.impacted.length > 0 ? (
+            <>
+              <p className="fd-card-lede">
+                이 자산을 근원으로 위험을 상속한 하위 자산 {row.impacted.length}개
+              </p>
+              <ul className="impacted-list">
+                {row.impacted.map((i) => (
+                  <li key={i.asset}>
+                    <span className="impacted-name">↳ {i.asset}</span>
+                    <span className="impact-score">영향도 {i.impactScore}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="muted">전파된 하위 자산 없음 (직접 위험).</p>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

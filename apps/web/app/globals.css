@@ -572,31 +572,97 @@ th.num {
   padding: 0;
   background-color: var(--bg);
 }
-.finding-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 1.25rem;
-  padding: 1.1rem 1.2rem 1.3rem;
-  border-bottom: 2px solid var(--accent);
+.finding-detail {
+  padding: 0.9rem 1.1rem 1.2rem;
+  border-left: 3px solid var(--accent);
 }
-.finding-detail-grid h4 {
-  margin: 0 0 0.5rem;
+/* 강조 요약 바 */
+.fd-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 0.75rem;
+  padding: 0.7rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--info);
+  border-radius: var(--radius-md);
+  margin-bottom: 0.9rem;
+}
+.fd-summary.sev-CRITICAL { border-left-color: var(--crit); }
+.fd-summary.sev-HIGH { border-left-color: var(--high); }
+.fd-summary.sev-MEDIUM { border-left-color: var(--med); }
+.fd-summary.sev-LOW { border-left-color: var(--low); }
+.fd-summary .badge {
+  font-size: 0.8rem;
+  padding: 0.18rem 0.6rem;
+}
+.fd-summary-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-right: auto;
+}
+.fd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.fd-chip {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.fd-chip.mono {
+  font-family: var(--font-mono);
   font-size: 0.78rem;
+}
+.fd-chip-score {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+/* 카드 그리드: 설명은 넓게, 메타 3개는 컴팩트 */
+.fd-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.fd-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 0.95rem;
+}
+.fd-card-wide {
+  grid-column: 1 / -1;
+}
+.fd-card h4 {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
-.finding-detail-grid section > p {
+.fd-card > p {
   margin: 0;
-  line-height: 1.55;
+  line-height: 1.6;
   font-size: 0.92rem;
 }
-.score-headline {
+.fd-card-lede {
   margin: 0 0 0.5rem !important;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
-.score-headline strong {
-  font-size: 1.3rem;
-  color: var(--accent);
+@media (max-width: 720px) {
+  .fd-cards {
+    grid-template-columns: 1fr;
+  }
 }
 /* 위험 점수 기여 분해 */
 .factor-list {
@@ -605,17 +671,29 @@ th.num {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 .factor-list li {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr auto;
-  align-items: center;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   font-size: 0.85rem;
 }
+.factor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.factor-name {
+  font-weight: 500;
+}
+.factor-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
 .factor-bar {
-  height: 0.5rem;
+  height: 0.45rem;
   background: var(--border);
   border-radius: var(--radius-full);
   overflow: hidden;
@@ -626,9 +704,8 @@ th.num {
   background: var(--accent);
   border-radius: var(--radius-full);
 }
-.factor-num {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.factor-sub {
+  font-size: 0.76rem;
 }
 /* 대상 자산 key-value */
 .kv {
