@@ -21,6 +21,7 @@ pnpm scan <package.json>              # SW 공급망(npm) — lockfile로 정확
 pnpm scan:vendor <vendors.yaml>       # 벤더/서드파티 컴플라이언스
 pnpm scan:iac <plan.json>             # Terraform plan JSON
 pnpm scan:service <services.yaml>     # 도메인 간 엣지 연결(영속화된 자산 대상 → DATABASE_URL/TENANT_ID 권장)
+pnpm scan:web <url>                   # 웹 노출 표면(EASM/웹공급망) — TLS·보안헤더·노출JS(→OSV)·SRI
 
 # HTTP API (Fastify, 포트 3000)
 pnpm serve         # OMNIGUARD_TOKENS 미설정 시 dev-token/admin 발급
@@ -40,6 +41,10 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - `packages/storage` — 포트/어댑터(`Repository`). InMemory · Postgres+RLS가 동일 계약.
   계약 테스트는 두 어댑터에 동일 적용(Postgres는 `DATABASE_URL` 있을 때만 실행).
 - `packages/connector-*` — 도메인별 입력 파싱 + 규칙. 신규 도메인은 보통 여기만 추가.
+  `connector-web`(EASM/웹공급망)은 예외적으로 `schema`에 `web_asset` 리터럴(+storage `assetIdentifier` 1 case)을
+  추가했다 — 유니온의 의도된 additive 확장점(기존 4타입 불변). `probe.ts`(네트워크 side-effect: 내장 `fetch`+`node:tls`),
+  `fingerprint.ts`(순수: script src→purl), `analyzeSite`(순수: web_asset+노출JS 자산+depends_on+TLS/헤더/SRI findings).
+  노출 JS는 `software_component`로 emit해 `enrichWithOsv`가 CVE를 자동 부여(취약점 로직 재사용). 테스트는 SiteProbe 픽스처 주입(네트워크 없음).
 - `packages/enrich-osv` — OSV.dev 보강(타임아웃·재시도·동시성 제한). 테스트는 Enricher 주입으로 네트워크 분리.
   CVSS 점수는 `src/cvss.ts`(순수 함수)가 v3.0/v3.1 벡터를 Base Score(0–10)로 계산해 `Finding.cvss`를 채우고,
   점수가 있으면 정성 등급 구간으로 severity 정밀화(없으면 GHSA 텍스트 라벨 폴백). v2/v4 미지원→폴백.
@@ -113,10 +118,14 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 ## 다음 단계 (로드맵 [예정])
 
-1. **큐 고도화** — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것(선택): 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
-2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
+1. **connector-web API/웹 연결** — 커넥터 MVP(CLI `scan:web`)는 완료. 남은 것: `apps/api/src/scans.ts`
+   `runScanJob` 디스패처에 web 케이스 + `POST /v1/scans/web` + 랜딩 히어로 입력창 연결. **다음 1순위.**
+2. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
+3. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
 
-완료: **OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),
+완료: **connector-web MVP**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web`, web_asset 리터럴,
+TLS·보안헤더·노출JS(→OSV 재사용)·SRI 4종, 단위 테스트 14건),
+**OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),
 CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
 대시보드 서비스 뷰(`/services` + `lib/services.ts`),
 **인증 DB 토큰화**(`TokenStore` 포트 + `DbAuthProvider`, sha256 해시, `002_api_token.sql`),
