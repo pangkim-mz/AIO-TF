@@ -29,7 +29,7 @@ function ScanResult({ state }: { state: ScanState }): ReactNode {
       : (state.message ?? "완료.");
     return (
       <p role="status" className="notice">
-        {text} <a href="/">대시보드 보기 →</a>
+        {text} <a href="/dashboard">대시보드 보기 →</a>
       </p>
     );
   }
