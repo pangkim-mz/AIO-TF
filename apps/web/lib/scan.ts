@@ -19,6 +19,7 @@ type NpmScanner = { scanNpm(input: NpmScanInput): Promise<ScanSummary> };
 type VendorScanner = { scanVendor(inventory: string): Promise<ScanSummary> };
 type IacScanner = { scanIac(input: IacScanInput): Promise<ScanSummary> };
 type ServiceScanner = { scanService(manifest: string): Promise<ServiceSummary> };
+type WebScanner = { scanWeb(url: string): Promise<ScanSummary> };
 
 function toErrorState(error: unknown): ScanState {
   if (error instanceof ApiClientError) {
@@ -73,6 +74,33 @@ export async function performIacScan(
       plan,
       stackName: stackName?.trim() || undefined,
     });
+    return { status: "success", summary };
+  } catch (error) {
+    return toErrorState(error);
+  }
+}
+
+/** URL 형식을 가볍게 검증한다(http/https만, 스킴 없으면 https 허용). */
+function isLikelyUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed === "") return false;
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    return url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+export async function performWebScan(
+  client: WebScanner,
+  url: string,
+): Promise<ScanState> {
+  if (!isLikelyUrl(url)) {
+    return { status: "error", message: "유효한 URL을 입력하세요 (예: https://example.com)." };
+  }
+  try {
+    const summary = await client.scanWeb(url.trim());
     return { status: "success", summary };
   } catch (error) {
     return toErrorState(error);

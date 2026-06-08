@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { WebScanForm } from "./scan/forms";
+import { scanWebAction } from "./scan/actions";
 
 interface Feature {
   icon: ReactNode;
@@ -133,12 +135,16 @@ export default function HomePage(): ReactNode {
           OmniGuard는 SW 공급망, 서드파티 벤더, 클라우드(IaC)를 단일 스키마로
           흡수하고, 자산 그래프 전파로 서비스 단위 통합 리스크를 산출합니다.
         </p>
+        <div className="hero-scan">
+          <p className="hero-scan-label">URL 하나로 바로 시작 — 웹 노출 표면 점검</p>
+          <WebScanForm action={scanWebAction} compact />
+        </div>
         <div className="hero-cta">
           <Link href="/dashboard" className="btn btn-primary">
             대시보드 보기
           </Link>
           <Link href="/scan" className="btn btn-outline">
-            스캔 시작
+            전체 스캔
           </Link>
         </div>
       </section>
@@ -169,7 +175,7 @@ export default function HomePage(): ReactNode {
               </div>
               <div className="step-content" style={{ padding: "1.5rem" }}>
                 <h3 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
-                  <span className="step-num" style={{ fontWeight: "bold", marginRight: "0.5rem" }}>{i + 1}.</span>
+                  <span className="step-num" style={{ fontWeight: "bold", marginRight: "0.5rem" }}>{i + 1}</span>
                   {s.title}
                 </h3>
                 <p style={{ color: "#4b5563", lineHeight: "1.5" }}>{s.body}</p>

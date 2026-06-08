@@ -1,11 +1,13 @@
 import { now } from "@omniguard/schema";
 import type { JobQueue, Repository } from "@omniguard/storage";
-import { type Enricher, runScanJob } from "./scans";
+import { type Enricher, type WebScanner, runScanJob } from "./scans";
 
 export interface WorkerDeps {
   queue: JobQueue;
   repo: Repository;
   enrich: Enricher;
+  /** URL 점검 함수(web 스캔용). 미지정 시 실제 네트워크 호출(scanUrl). 테스트는 주입. */
+  scanWeb?: WebScanner;
   /** 폴링 간격(ms). 대기 작업이 없을 때만 쉰다. 기본 200ms. */
   pollIntervalMs?: number;
   /** 최대 시도 횟수. 이 횟수만큼 실패하면 영구 실패 처리. 기본 3. */
@@ -62,7 +64,12 @@ export class ScanWorker {
     const job = await this.deps.queue.claimNext({ leaseMs: this.leaseMs });
     if (!job) return false;
     try {
-      const result = await runScanJob(this.deps.repo, this.deps.enrich, job);
+      const result = await runScanJob(
+        this.deps.repo,
+        this.deps.enrich,
+        job,
+        this.deps.scanWeb,
+      );
       await this.deps.queue.complete(job.id, result);
     } catch (error) {
       const message = errorMessage(error);

@@ -145,6 +145,9 @@ export class ApiClient {
   scanService(manifest: string): Promise<ServiceSummary> {
     return this.submitScan<ServiceSummary>("/v1/scans/service", { manifest });
   }
+  scanWeb(url: string): Promise<ScanSummary> {
+    return this.submitScan<ScanSummary>("/v1/scans/web", { url });
+  }
 
   /** 스캔을 큐에 넣고(202) 완료될 때까지 폴링해 결과를 반환한다. */
   private async submitScan<T>(path: string, body: unknown): Promise<T> {

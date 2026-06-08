@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 123 passed / 4 skipped(Postgres 계약 4건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 148 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -118,13 +118,13 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 ## 다음 단계 (로드맵 [예정])
 
-1. **connector-web API/웹 연결** — 커넥터 MVP(CLI `scan:web`)는 완료. 남은 것: `apps/api/src/scans.ts`
-   `runScanJob` 디스패처에 web 케이스 + `POST /v1/scans/web` + 랜딩 히어로 입력창 연결. **다음 1순위.**
-2. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
-3. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
+1. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
+2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
+3. **connector-web Phase 2**(선택) — 능동 점검(서브도메인 열거·시크릿 스캔) + 도메인 소유권 검증(DNS TXT).
 
-완료: **connector-web MVP**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web`, web_asset 리터럴,
-TLS·보안헤더·노출JS(→OSV 재사용)·SRI 4종, 단위 테스트 14건),
+완료: **connector-web MVP + API/웹 연결**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web` +
+`POST /v1/scans/web`(`JOB_TYPES`에 `web`, `runWebScan`, 워커 `scanWeb` 주입) + 대시보드 `/scan` 웹 섹션·랜딩 히어로
+URL 입력창. web_asset 리터럴, TLS·보안헤더·노출JS(→OSV 재사용)·SRI),
 **OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),
 CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. Node 22 + pnpm 11 allowBuilds),
 대시보드 서비스 뷰(`/services` + `lib/services.ts`),

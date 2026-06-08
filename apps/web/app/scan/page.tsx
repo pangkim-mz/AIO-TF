@@ -4,12 +4,14 @@ import {
   NpmScanForm,
   ServiceScanForm,
   VendorScanForm,
+  WebScanForm,
 } from "./forms";
 import {
   scanIacAction,
   scanNpmAction,
   scanServiceAction,
   scanVendorAction,
+  scanWebAction,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +36,13 @@ export default function ScanPage(): ReactNode {
         <section>
           <h2>클라우드 / 인프라 (IaC)</h2>
           <IacScanForm action={scanIacAction} />
+        </section>
+        <section>
+          <h2>웹 노출 표면 (EASM / 웹 공급망)</h2>
+          <p className="muted">
+            URL을 넣으면 TLS·보안 헤더·노출 JS(→OSV 취약점)·SRI 누락을 점검합니다.
+          </p>
+          <WebScanForm action={scanWebAction} />
         </section>
         <section>
           <h2>서비스 토폴로지 (도메인 간 연결)</h2>

@@ -101,6 +101,33 @@ export function ServiceScanForm({ action }: { action: ScanAction }): ReactNode {
   );
 }
 
+export function WebScanForm({
+  action,
+  compact = false,
+}: {
+  action: ScanAction;
+  compact?: boolean;
+}): ReactNode {
+  const [state, formAction] = useFormState(action, initialScanState);
+  return (
+    <form action={formAction} className={compact ? "scan-form scan-form-inline" : "scan-form"}>
+      {!compact && <label htmlFor="web-url">점검할 URL</label>}
+      <div className={compact ? "inline-field" : undefined}>
+        <input
+          id="web-url"
+          name="url"
+          type="text"
+          inputMode="url"
+          placeholder="https://example.com"
+          aria-label="점검할 URL"
+        />
+        <SubmitButton label={compact ? "URL 보안 점검" : "웹 점검"} />
+      </div>
+      <ScanResult state={state} />
+    </form>
+  );
+}
+
 export function VendorScanForm({ action }: { action: ScanAction }): ReactNode {
   const [state, formAction] = useFormState(action, initialScanState);
   return (

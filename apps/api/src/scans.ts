@@ -17,6 +17,7 @@ import {
   buildTopology,
   parseServiceManifestContent,
 } from "@omniguard/connector-service";
+import { scanUrl, type WebScan } from "@omniguard/connector-web";
 import type { Job, Repository } from "@omniguard/storage";
 
 /** 자산 → 취약점 보강 함수. 기본은 OSV 호출, 테스트에서는 주입으로 대체. */
@@ -24,6 +25,9 @@ export type Enricher = (
   assets: readonly Asset[],
   tenantId: string,
 ) => Promise<Finding[]>;
+
+/** URL → 웹 점검 결과. 기본은 네트워크 호출(scanUrl), 테스트에서는 주입으로 대체. */
+export type WebScanner = (url: string, tenantId: string) => Promise<WebScan>;
 
 // ── 스캔 입력 본문 스키마(검증은 enqueue 시점, 실행은 워커에서) ──
 export const ScanVendorBody = z.object({
@@ -43,6 +47,10 @@ export const ScanIacBody = z.object({
 
 export const ScanServiceBody = z.object({
   manifest: z.string().min(1), // 서비스 매니페스트(YAML/JSON)
+});
+
+export const ScanWebBody = z.object({
+  url: z.string().min(1), // 점검 대상 URL(스킴 없으면 https로 정규화)
 });
 
 export interface ScanSummary {
@@ -157,6 +165,46 @@ async function runIacScan(
   };
 }
 
+/**
+ * URL을 점검한다: web_asset + 노출 JS 자산/엣지 + TLS·헤더·SRI findings(커넥터) +
+ * 노출 JS의 CVE(enrich 재사용). 커넥터 findings는 영속화 id로 재매핑한다(CLI web.ts와 동일).
+ */
+async function runWebScan(
+  repo: Repository,
+  enrich: Enricher,
+  tenantId: string,
+  url: string,
+  scanWeb: WebScanner,
+): Promise<ScanSummary> {
+  const scanned = await scanWeb(url, tenantId);
+  const assets = await repo.upsertAssets(tenantId, scanned.assets);
+  const idMap = new Map(scanned.assets.map((a, i) => [a.id, assets[i]!.id]));
+  const remappedRels = scanned.relationships.map((r) => ({
+    ...r,
+    fromAssetId: idMap.get(r.fromAssetId) ?? r.fromAssetId,
+    toAssetId: idMap.get(r.toAssetId) ?? r.toAssetId,
+  }));
+  const relationships = await repo.upsertRelationships(tenantId, remappedRels);
+
+  const webFindings = scanned.findings.map((f) => ({
+    ...f,
+    assetId: idMap.get(f.assetId) ?? f.assetId,
+  }));
+  const osvFindings = await enrich(assets, tenantId); // 노출 JS(software_component)→CVE
+  const findings = await repo.upsertFindings(tenantId, [
+    ...webFindings,
+    ...osvFindings,
+  ]);
+  const topScore = await scoreAndPersist(repo, tenantId, assets, findings);
+
+  return {
+    assetCount: assets.length,
+    relationshipCount: relationships.length,
+    findingCount: findings.length,
+    topScore,
+  };
+}
+
 /** 서비스 매니페스트를 기존 자산에 연결한다(도메인 간 그래프). 발견은 생성하지 않는다. */
 async function runServiceScan(
   repo: Repository,
@@ -186,6 +234,7 @@ export async function runScanJob(
   repo: Repository,
   enrich: Enricher,
   job: Job,
+  scanWeb: WebScanner = scanUrl,
 ): Promise<ScanSummary | ServiceSummary> {
   const { tenantId, type, payload } = job;
   switch (type) {
@@ -199,6 +248,8 @@ export async function runScanJob(
     }
     case "service":
       return runServiceScan(repo, tenantId, ScanServiceBody.parse(payload).manifest);
+    case "web":
+      return runWebScan(repo, enrich, tenantId, ScanWebBody.parse(payload).url, scanWeb);
   }
 }
 

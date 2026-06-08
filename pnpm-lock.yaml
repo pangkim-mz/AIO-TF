@@ -35,6 +35,9 @@ importers:
       '@omniguard/connector-vendor':
         specifier: workspace:*
         version: link:../../packages/connector-vendor
+      '@omniguard/connector-web':
+        specifier: workspace:*
+        version: link:../../packages/connector-web
       '@omniguard/enrich-osv':
         specifier: workspace:*
         version: link:../../packages/enrich-osv

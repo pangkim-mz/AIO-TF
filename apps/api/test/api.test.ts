@@ -3,7 +3,7 @@ import { type Finding, newId, now } from "@omniguard/schema";
 import { InMemoryJobQueue, InMemoryRepository } from "@omniguard/storage";
 import { buildServer } from "../src/server";
 import { ScanWorker } from "../src/worker";
-import type { Enricher } from "../src/scans";
+import type { Enricher, WebScanner } from "../src/scans";
 import { InMemoryAuthProvider, type Principal } from "../src/auth";
 
 const ADMIN_TENANT = newId();
@@ -54,7 +54,50 @@ const stubEnrich: Enricher = async (assets, tenantId) => {
   return [finding];
 };
 
-function makeSetup(enrich?: Enricher, workerOpts?: { maxAttempts?: number; retryBaseMs?: number }) {
+// 네트워크 없이 web_asset + 노출 JS(jquery) + depends_on + 헤더 finding을 만드는 스텁
+const stubWebScan: WebScanner = async (url, tenantId) => {
+  const ts = now();
+  const web = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    name: "example.com", criticality: "HIGH" as const, owner: null, tags: {},
+    attributes: { type: "web_asset" as const, url, hostname: "example.com" },
+  };
+  const jquery = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    name: "jquery", criticality: "MEDIUM" as const, owner: null, tags: {},
+    attributes: {
+      type: "software_component" as const, purl: "pkg:npm/jquery@3.4.1",
+      ecosystem: "npm", version: "3.4.1", licenses: [],
+    },
+  };
+  const finding: Finding = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    assetId: web.id, category: "misconfiguration", sourceFindingId: "WEB-HEADER-MISSING-HSTS",
+    title: "HSTS 헤더 누락", description: "", severity: "MEDIUM", cvss: null,
+    status: "open", detectedAt: ts, resolvedAt: null, raw: {},
+  };
+  return { assets: [web, jquery], relationships: [
+    { id: newId(), tenantId, fromAssetId: web.id, toAssetId: jquery.id, type: "depends_on" as const },
+  ], findings: [finding] };
+};
+
+// 노출 JS(jquery)에 CVE 1건을 부여하는 스텁 보강기
+const stubWebEnrich: Enricher = async (assets, tenantId) => {
+  const dep = assets.find((a) => a.name === "jquery");
+  if (!dep) return [];
+  const ts = now();
+  return [{
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["enrich-osv"],
+    assetId: dep.id, category: "vulnerability", sourceFindingId: "GHSA-web-test",
+    title: "jquery XSS", description: "", severity: "HIGH", cvss: null,
+    status: "open", detectedAt: ts, resolvedAt: null, raw: {},
+  }];
+};
+
+function makeSetup(
+  enrich?: Enricher,
+  workerOpts?: { maxAttempts?: number; retryBaseMs?: number; scanWeb?: WebScanner },
+) {
   const repo = new InMemoryRepository();
   const queue = new InMemoryJobQueue();
   const worker = new ScanWorker({
@@ -274,6 +317,33 @@ describe("OmniGuard API (비동기 스캔)", () => {
     expect(row.inherited).toBe(true);
     expect(row.impactScore).toBe(82);
     expect(row.rootCause).toBe("lodash");
+  });
+
+  it("web 스캔 → web_asset + 노출 JS + depends_on, 노출 JS CVE를 web_asset이 상속", async () => {
+    ({ app, worker } = makeSetup(stubWebEnrich, { scanWeb: stubWebScan }));
+
+    const { job } = await runScan(app, worker, "/v1/scans/web", { url: "https://example.com" });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.assetCount).toBe(2); // web_asset + jquery
+    expect(job.result.relationshipCount).toBe(1);
+    expect(job.result.findingCount).toBe(2); // 헤더 미설정(web) + jquery CVE(enrich)
+    expect(job.result.topScore).toBeGreaterThan(0);
+
+    // web_asset 자체 취약점이 없어도 노출 JS(jquery)의 위험을 그래프 전파로 상속
+    const impact = await app.inject({ method: "GET", url: "/v1/impact", headers: auth("admin-token") });
+    const webRow = impact.json().data.find((r: { asset: string }) => r.asset === "example.com");
+    expect(webRow.inherited).toBe(true);
+    expect(webRow.rootCause).toBe("jquery");
+  });
+
+  it("web 스캔 본문(url) 누락은 400", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/v1/scans/web",
+      headers: auth("admin-token"),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   it("재시도를 모두 소진한 스캔 오류는 작업을 failed로 만든다", async () => {

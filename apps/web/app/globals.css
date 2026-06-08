@@ -378,6 +378,40 @@ th.num {
   margin-top: 0.5rem;
 }
 
+/* Hero inline web-scan form */
+.hero-scan {
+  width: 100%;
+  max-width: 38rem;
+  margin: 0.5rem auto 0;
+}
+.hero-scan-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.scan-form-inline {
+  gap: 0.5rem;
+}
+.scan-form-inline .inline-field {
+  display: flex;
+  gap: 0.5rem;
+}
+.scan-form-inline .inline-field input {
+  flex: 1;
+  margin: 0;
+}
+.scan-form-inline .inline-field button {
+  margin: 0;
+  white-space: nowrap;
+  width: auto;
+}
+@media (max-width: 520px) {
+  .scan-form-inline .inline-field {
+    flex-direction: column;
+  }
+}
+
 /* Section title */
 .section-title {
   margin: 0 0 2rem;
