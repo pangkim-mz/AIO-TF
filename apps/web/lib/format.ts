@@ -12,6 +12,8 @@ export function assetIdentifier(asset: Asset): string {
       return asset.attributes.resourceId;
     case "service":
       return asset.attributes.key;
+    case "web_asset":
+      return asset.attributes.url;
   }
 }
 
