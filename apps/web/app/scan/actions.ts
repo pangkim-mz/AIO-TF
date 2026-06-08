@@ -79,9 +79,13 @@ export async function scanWebAction(
   return state;
 }
 
-/** 스캔 성공 후 조회 페이지 캐시를 무효화한다. */
+/**
+ * 스캔 성공 후 데이터 조회 페이지의 캐시를 무효화한다.
+ * 대시보드는 NordVPN 리디자인에서 "/"→"/dashboard"로 이동했다(랜딩이 "/"). 데이터를
+ * 보여주는 페이지만 무효화해야 스캔 직후 소프트 내비게이션에서도 최신 값이 보인다.
+ */
 function revalidateViews(): void {
-  for (const path of ["/", "/assets", "/findings", "/impact", "/services"]) {
+  for (const path of ["/dashboard", "/assets", "/findings", "/impact", "/services"]) {
     revalidatePath(path);
   }
 }
