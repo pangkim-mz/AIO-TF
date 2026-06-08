@@ -8,6 +8,7 @@
     "@omniguard/connector-npm": "workspace:*",
     "@omniguard/connector-service": "workspace:*",
     "@omniguard/connector-vendor": "workspace:*",
+    "@omniguard/connector-web": "workspace:*",
     "@omniguard/enrich-osv": "workspace:*",
     "@omniguard/graph": "workspace:*",
     "@omniguard/schema": "workspace:*",

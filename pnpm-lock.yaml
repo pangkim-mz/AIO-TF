@@ -74,6 +74,9 @@ importers:
       '@omniguard/connector-vendor':
         specifier: workspace:*
         version: link:../../packages/connector-vendor
+      '@omniguard/connector-web':
+        specifier: workspace:*
+        version: link:../../packages/connector-web
       '@omniguard/enrich-osv':
         specifier: workspace:*
         version: link:../../packages/enrich-osv
@@ -156,6 +159,15 @@ importers:
       yaml:
         specifier: ^2.6.1
         version: 2.9.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+
+  packages/connector-web:
+    dependencies:
+      '@omniguard/schema':
+        specifier: workspace:*
+        version: link:../schema
       zod:
         specifier: ^3.24.1
         version: 3.25.76

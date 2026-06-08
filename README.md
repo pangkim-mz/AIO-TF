@@ -22,7 +22,7 @@ CLI · HTTP API(Fastify) · 대시보드(Next.js) 세 가지 진입점을 제공
 | `packages/scoring` | 결정론적 리스크 점수 (근거 분해 포함) |
 | `packages/graph` | 자산 그래프 위험 전파 (순환 안전, 영향도 산정) |
 | `packages/storage` | 멀티테넌트 영속화 (포트/어댑터: InMemory · Postgres+RLS) |
-| `apps/cli` | 오케스트레이터 (`scan` · `scan:vendor` · `scan:iac` · `scan:service`) |
+| `apps/cli` | 오케스트레이터 (`scan` · `scan:vendor` · `scan:iac` · `scan:service` · `scan:web`) |
 | `apps/api` | HTTP API (Fastify): 토큰 인증·테넌트 라우팅·RBAC·일관 응답 포맷 |
 | `apps/web` | 대시보드 (Next.js App Router): 자산·발견·영향도 시각화 |
 
@@ -54,6 +54,9 @@ pnpm scan:iac <path/to/plan.json>
 
 # 서비스 토폴로지 연결 (도메인 간) — 영속화된 자산 대상이라 DATABASE_URL 권장
 $env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service <path/to/services.yaml>
+
+# 웹 노출 표면 스캔 (EASM/웹공급망: TLS·보안헤더·노출 JS(→OSV)·SRI)
+pnpm scan:web https://example.com
 ```
 
 ## 영속화 (멀티테넌트)
