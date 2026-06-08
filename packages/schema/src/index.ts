@@ -55,11 +55,18 @@ const ServiceAttrs = z.object({
   key: z.string(), // 자연키: 서비스 슬러그 (예: checkout-api)
 });
 
+const WebAssetAttrs = z.object({
+  type: z.literal("web_asset"),
+  url: z.string(), // 자연키: origin URL (예: https://example.com)
+  hostname: z.string(),
+});
+
 export const AssetAttributes = z.discriminatedUnion("type", [
   SoftwareComponentAttrs,
   VendorAttrs,
   CloudResourceAttrs,
   ServiceAttrs,
+  WebAssetAttrs,
 ]);
 export type AssetAttributes = z.infer<typeof AssetAttributes>;
 
