@@ -19,6 +19,7 @@ import {
   ScanNpmBody,
   ScanServiceBody,
   ScanVendorBody,
+  ScanWebBody,
   computeImpact,
 } from "./scans";
 
@@ -141,6 +142,10 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
     api.post("/v1/scans/service", async (request, reply) => {
       await enqueueScan(deps, request, reply, "service", ScanServiceBody.parse(request.body));
+    });
+
+    api.post("/v1/scans/web", async (request, reply) => {
+      await enqueueScan(deps, request, reply, "web", ScanWebBody.parse(request.body));
     });
 
     // 작업 상태 폴링(테넌트 범위)

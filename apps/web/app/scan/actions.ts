@@ -8,6 +8,7 @@ import {
   performNpmScan,
   performServiceScan,
   performVendorScan,
+  performWebScan,
 } from "../../lib/scan";
 
 function field(formData: FormData, name: string): string {
@@ -69,9 +70,18 @@ export async function scanServiceAction(
   return state;
 }
 
+export async function scanWebAction(
+  _prev: ScanState,
+  formData: FormData,
+): Promise<ScanState> {
+  const state = await performWebScan(serverClient(), field(formData, "url"));
+  if (state.status === "success") revalidateViews();
+  return state;
+}
+
 /** 스캔 성공 후 조회 페이지 캐시를 무효화한다. */
 function revalidateViews(): void {
-  for (const path of ["/", "/assets", "/findings", "/impact"]) {
+  for (const path of ["/", "/assets", "/findings", "/impact", "/services"]) {
     revalidatePath(path);
   }
 }

@@ -5,6 +5,7 @@ import {
   performNpmScan,
   performServiceScan,
   performVendorScan,
+  performWebScan,
 } from "../lib/scan";
 
 describe("performNpmScan", () => {
@@ -83,6 +84,31 @@ describe("performIacScan", () => {
     const state = await performIacScan(client, "   ");
     expect(state.status).toBe("error");
     expect(client.scanIac).not.toHaveBeenCalled();
+  });
+});
+
+describe("performWebScan", () => {
+  const summary = { assetCount: 3, relationshipCount: 2, findingCount: 5, topScore: 58 };
+
+  it("성공 시 summary를 담은 success 상태 (스킴 없는 URL도 허용)", async () => {
+    const client = { scanWeb: vi.fn(async () => summary) };
+    const state = await performWebScan(client, "example.com");
+    expect(state).toEqual({ status: "success", summary });
+    expect(client.scanWeb).toHaveBeenCalledWith("example.com");
+  });
+
+  it("유효하지 않은 URL은 호출 없이 에러", async () => {
+    const client = { scanWeb: vi.fn() };
+    const state = await performWebScan(client, "not a url");
+    expect(state.status).toBe("error");
+    expect(client.scanWeb).not.toHaveBeenCalled();
+  });
+
+  it("빈 입력은 호출 없이 에러", async () => {
+    const client = { scanWeb: vi.fn() };
+    const state = await performWebScan(client, "   ");
+    expect(state.status).toBe("error");
+    expect(client.scanWeb).not.toHaveBeenCalled();
   });
 });
 

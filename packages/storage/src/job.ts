@@ -1,7 +1,7 @@
 import { newId, now } from "@omniguard/schema";
 
 /** 스캔 잡 종류(도메인별). */
-export const JOB_TYPES = ["npm", "vendor", "iac", "service"] as const;
+export const JOB_TYPES = ["npm", "vendor", "iac", "service", "web"] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed";

@@ -8,7 +8,7 @@ create table if not exists job (
   id          text primary key,
   seq         bigserial,                -- 삽입 순서(FIFO 클레임용; ULID는 ms 내 단조증가 미보장)
   tenant_id   text not null,
-  type        text not null,            -- npm / vendor / iac / service
+  type        text not null,            -- npm / vendor / iac / service / web
   status      text not null default 'queued', -- queued / running / succeeded / failed
   payload     jsonb not null,           -- 스캔 입력(종류별)
   result      jsonb,                    -- 성공 시 요약(ScanSummary 등)
