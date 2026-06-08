@@ -1,51 +1,34 @@
 import type { ReactNode } from "react";
 import { serverClient } from "../../lib/server-client";
+import { buildImpactDetails } from "../../lib/impact";
 import { EmptyNotice, ErrorNotice } from "../components";
+import { ImpactTable } from "../impact-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function ImpactPage(): Promise<ReactNode> {
   const client = serverClient();
   try {
-    const impact = await client.getImpact();
-    const sorted = [...impact].sort((a, b) => b.impactScore - a.impactScore);
+    const [impact, assets, relationships, findings] = await Promise.all([
+      client.getImpact(),
+      client.getAssets(),
+      client.getRelationships(),
+      client.getFindings(),
+    ]);
+    const rows = buildImpactDetails(impact, assets, relationships, findings);
 
     return (
       <>
         <h1>영향도 전파</h1>
         <p className="muted">
           의존성/관계를 따라 전파된 영향도. &quot;상속&quot;은 자체 리스크보다 하위
-          자산에서 받은 리스크가 더 큰 경우입니다.
+          자산에서 받은 리스크가 더 큰 경우입니다. 행을 클릭하면 자체↔전파 비교·근원
+          경로·직접 발견을 펼쳐 볼 수 있습니다.
         </p>
-        {sorted.length === 0 ? (
+        {rows.length === 0 ? (
           <EmptyNotice message="영향도 데이터가 없습니다." />
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">자산</th>
-                <th scope="col" className="num">
-                  직접 점수
-                </th>
-                <th scope="col" className="num">
-                  영향도 점수
-                </th>
-                <th scope="col">상속</th>
-                <th scope="col">근원(Root Cause)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => (
-                <tr key={r.assetId}>
-                  <td>{r.asset}</td>
-                  <td className="num">{r.ownScore}</td>
-                  <td className="num">{r.impactScore}</td>
-                  <td>{r.inherited ? "예" : "—"}</td>
-                  <td>{r.rootCause ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ImpactTable rows={rows} />
         )}
       </>
     );

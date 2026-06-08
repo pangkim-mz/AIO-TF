@@ -2,25 +2,26 @@ import type { ReactNode } from "react";
 import { serverClient } from "../../lib/server-client";
 import { summarize } from "../../lib/format";
 import { buildFindingDetails } from "../../lib/findings";
+import { buildImpactDetails } from "../../lib/impact";
 import { EmptyNotice, ErrorNotice, StatCard } from "../components";
 import { FindingsTable } from "../findings-table";
+import { ImpactTable } from "../impact-table";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage(): Promise<ReactNode> {
   const client = serverClient();
   try {
-    const [assets, findings, scores, impact] = await Promise.all([
+    const [assets, findings, scores, impact, relationships] = await Promise.all([
       client.getAssets(),
       client.getFindings(),
       client.getScores(),
       client.getImpact(),
+      client.getRelationships(),
     ]);
     const summary = summarize(assets.length, findings, impact);
     const topFindings = buildFindingDetails(findings, assets, scores, impact).slice(0, 5);
-    const topImpact = [...impact]
-      .sort((a, b) => b.impactScore - a.impactScore)
-      .slice(0, 5);
+    const topImpact = buildImpactDetails(impact, assets, relationships, findings).slice(0, 5);
 
     return (
       <>
@@ -42,31 +43,11 @@ export default async function DashboardPage(): Promise<ReactNode> {
         )}
 
         <h2>상위 영향도 (그래프 전파)</h2>
+        <p className="muted">행을 클릭하면 자체↔전파 비교·근원 경로·직접 발견을 펼쳐 볼 수 있습니다.</p>
         {topImpact.length === 0 ? (
           <EmptyNotice message="영향도 데이터가 없습니다." />
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">자산</th>
-                <th scope="col" className="num">
-                  영향도
-                </th>
-                <th scope="col">상속</th>
-                <th scope="col">근원</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topImpact.map((r) => (
-                <tr key={r.assetId}>
-                  <td>{r.asset}</td>
-                  <td className="num">{r.impactScore}</td>
-                  <td>{r.inherited ? "예" : "—"}</td>
-                  <td>{r.rootCause ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <ImpactTable rows={topImpact} />
         )}
       </>
     );
