@@ -845,3 +845,36 @@ th.num {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── 자산 펼침 패널 ───────────────────────────────────────── */
+/* 심각도별 발견 개수 */
+.sev-counts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+}
+.sev-counts li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.sev-count-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.fd-risk-note {
+  margin: 0.7rem 0 0 !important;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+/* 자산 태그 칩 묶음 */
+.asset-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+}
