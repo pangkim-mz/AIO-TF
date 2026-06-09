@@ -19,7 +19,7 @@ type NpmScanner = { scanNpm(input: NpmScanInput): Promise<ScanSummary> };
 type VendorScanner = { scanVendor(inventory: string): Promise<ScanSummary> };
 type IacScanner = { scanIac(input: IacScanInput): Promise<ScanSummary> };
 type ServiceScanner = { scanService(manifest: string): Promise<ServiceSummary> };
-type WebScanner = { scanWeb(url: string): Promise<ScanSummary> };
+type WebScanner = { scanWeb(url: string, active?: boolean): Promise<ScanSummary> };
 
 function toErrorState(error: unknown): ScanState {
   if (error instanceof ApiClientError) {
@@ -95,13 +95,19 @@ function isLikelyUrl(value: string): boolean {
 export async function performWebScan(
   client: WebScanner,
   url: string,
+  active = false,
 ): Promise<ScanState> {
   if (!isLikelyUrl(url)) {
     return { status: "error", message: "유효한 URL을 입력하세요 (예: https://example.com)." };
   }
   try {
-    const summary = await client.scanWeb(url.trim());
-    return { status: "success", summary };
+    const summary = await client.scanWeb(url.trim(), active);
+    // 능동 점검 요청했으나 소유권 미검증이면 passive만 수행됨을 알린다(성공이되 안내 포함).
+    const message =
+      active && summary.activeSkipped
+        ? `소유권 미검증으로 능동 점검을 건너뛰고 기본 점검만 수행했습니다. DNS TXT에 추가: ${summary.expectedToken}`
+        : undefined;
+    return { status: "success", summary, message };
   } catch (error) {
     return toErrorState(error);
   }

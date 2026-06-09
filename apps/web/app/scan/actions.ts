@@ -74,7 +74,8 @@ export async function scanWebAction(
   _prev: ScanState,
   formData: FormData,
 ): Promise<ScanState> {
-  const state = await performWebScan(serverClient(), field(formData, "url"));
+  const active = formData.get("active") === "on";
+  const state = await performWebScan(serverClient(), field(formData, "url"), active);
   if (state.status === "success") revalidateViews();
   return state;
 }

@@ -121,6 +121,7 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 | POST | `/v1/scans/npm` | admin/analyst | package.json(+lockfile) 스캔·OSV 보강(비동기 접수) |
 | POST | `/v1/scans/iac` | admin/analyst | Terraform plan JSON 스캔·미설정 평가(비동기 접수) |
 | POST | `/v1/scans/service` | admin/analyst | 서비스 매니페스트 → 도메인 간 엣지 연결(비동기 접수) |
+| POST | `/v1/scans/web` | admin/analyst | URL 웹 노출 표면 스캔. 본문 `{ url, active? }`(`active:true`면 소유권 검증 후 능동 점검) |
 | GET | `/v1/jobs/:id` | 인증 | 스캔 작업 상태/결과 폴링(테넌트 범위) |
 | POST | `/v1/tokens` | admin | 토큰 발급 — 원문 1회 노출, 저장은 해시만. 본문 `{ role, label? }` |
 | GET | `/v1/tokens` | admin | 테넌트 토큰 목록(메타데이터만: `tokenHash`/`role`/`label`) |
@@ -131,6 +132,9 @@ pnpm serve   # 기본 포트 3000. OMNIGUARD_TOKENS 미설정 시 개발용 "dev
 클라이언트는 `GET /v1/jobs/:id`로 상태(`queued`/`running`/`succeeded`/`failed`)와 결과를 폴링한다.
 `/v1/scans/npm` 본문: `{ packageJson: string, lockfile?: string, lockfileType?: "npm"|"pnpm" }`
 (lockfile 제공 시 정확한 버전, 없으면 레인지 근사치).
+`/v1/scans/web` 본문: `{ url: string, active?: boolean }`. `active:true`면 도메인 소유권(DNS TXT)
+검증 후 서브도메인 열거·시크릿 스캔을 더하고, 결과에 `ownershipVerified`/`activeSkipped`/`expectedToken`을
+싣는다(미검증이면 passive 점검만 + 추가할 TXT 토큰 안내).
 
 ## 대시보드 (`apps/web`)
 

@@ -3,7 +3,7 @@ import { type Finding, newId, now } from "@omniguard/schema";
 import { InMemoryJobQueue, InMemoryRepository } from "@omniguard/storage";
 import { buildServer } from "../src/server";
 import { ScanWorker } from "../src/worker";
-import type { Enricher, WebScanner } from "../src/scans";
+import type { ActiveWebScanner, Enricher, WebScanner } from "../src/scans";
 import { InMemoryAuthProvider, type Principal } from "../src/auth";
 
 const ADMIN_TENANT = newId();
@@ -94,9 +94,54 @@ const stubWebEnrich: Enricher = async (assets, tenantId) => {
   }];
 };
 
+// 소유권 검증된 능동 점검: passive 결과 + 서브도메인(contains) 자산 + 시크릿 finding
+const stubActiveVerified: ActiveWebScanner = async (url, tenantId) => {
+  const base = await stubWebScan(url, tenantId);
+  const web = base.assets[0]!; // web_asset
+  const ts = now();
+  const sub = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    name: "api.example.com", criticality: "MEDIUM" as const, owner: null,
+    tags: { source: "subdomain-enum" },
+    attributes: { type: "web_asset" as const, url: "https://api.example.com/", hostname: "api.example.com" },
+  };
+  const secret: Finding = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    assetId: web.id, category: "misconfiguration",
+    sourceFindingId: "WEB-SECRET-EXPOSED:SECRET-AWS-ACCESS-KEY:AKIA…",
+    title: "노출된 시크릿: AWS Access Key ID", description: "", severity: "CRITICAL", cvss: null,
+    status: "open", detectedAt: ts, resolvedAt: null, raw: {},
+  };
+  return {
+    assets: [...base.assets, sub],
+    relationships: [
+      ...base.relationships,
+      { id: newId(), tenantId, fromAssetId: web.id, toAssetId: sub.id, type: "contains" as const },
+    ],
+    findings: [...base.findings, secret],
+    ownership: { hostname: "example.com", verified: true, expectedToken: "omniguard-site-verification=tok", error: null },
+    activeSkipped: false,
+  };
+};
+
+// 소유권 미검증: passive 결과만 + activeSkipped/토큰 안내
+const stubActiveSkipped: ActiveWebScanner = async (url, tenantId) => {
+  const base = await stubWebScan(url, tenantId);
+  return {
+    ...base,
+    ownership: { hostname: "example.com", verified: false, expectedToken: "omniguard-site-verification=tok", error: "no TXT" },
+    activeSkipped: true,
+  };
+};
+
 function makeSetup(
   enrich?: Enricher,
-  workerOpts?: { maxAttempts?: number; retryBaseMs?: number; scanWeb?: WebScanner },
+  workerOpts?: {
+    maxAttempts?: number;
+    retryBaseMs?: number;
+    scanWeb?: WebScanner;
+    activeScan?: ActiveWebScanner;
+  },
 ) {
   const repo = new InMemoryRepository();
   const queue = new InMemoryJobQueue();
@@ -344,6 +389,40 @@ describe("OmniGuard API (비동기 스캔)", () => {
       payload: {},
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it("능동 web 스캔(소유권 검증) → 서브도메인·시크릿 추가, ownershipVerified", async () => {
+    ({ app, worker } = makeSetup(stubWebEnrich, {
+      scanWeb: stubWebScan,
+      activeScan: stubActiveVerified,
+    }));
+    const { job } = await runScan(app, worker, "/v1/scans/web", {
+      url: "https://example.com",
+      active: true,
+    });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.ownershipVerified).toBe(true);
+    expect(job.result.activeSkipped).toBe(false);
+    expect(job.result.assetCount).toBe(3); // web + jquery + 서브도메인
+    expect(job.result.findingCount).toBe(3); // 헤더 + jquery CVE + 시크릿
+    // 시크릿(CRITICAL)이 최고 점수에 반영
+    expect(job.result.topScore).toBeGreaterThan(0);
+  });
+
+  it("능동 web 스캔(소유권 미검증) → passive만, activeSkipped + 토큰 안내", async () => {
+    ({ app, worker } = makeSetup(stubWebEnrich, {
+      scanWeb: stubWebScan,
+      activeScan: stubActiveSkipped,
+    }));
+    const { job } = await runScan(app, worker, "/v1/scans/web", {
+      url: "https://example.com",
+      active: true,
+    });
+    expect(job.status).toBe("succeeded");
+    expect(job.result.activeSkipped).toBe(true);
+    expect(job.result.ownershipVerified).toBe(false);
+    expect(job.result.expectedToken).toContain("omniguard-site-verification=");
+    expect(job.result.assetCount).toBe(2); // web + jquery (서브도메인 없음)
   });
 
   it("재시도를 모두 소진한 스캔 오류는 작업을 failed로 만든다", async () => {

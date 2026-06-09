@@ -20,6 +20,12 @@ export interface ScanSummary {
   relationshipCount: number;
   findingCount: number;
   topScore: number;
+  /** 능동 점검 요청 시: 도메인 소유권(DNS TXT) 검증 여부. */
+  ownershipVerified?: boolean;
+  /** 능동 점검 요청했으나 소유권 미검증으로 능동 점검을 건너뛰었는가. */
+  activeSkipped?: boolean;
+  /** 능동 점검 미검증 시 DNS에 추가할 TXT 토큰(검증 안내용). */
+  expectedToken?: string;
 }
 
 export interface ServiceSummary {
@@ -145,8 +151,8 @@ export class ApiClient {
   scanService(manifest: string): Promise<ServiceSummary> {
     return this.submitScan<ServiceSummary>("/v1/scans/service", { manifest });
   }
-  scanWeb(url: string): Promise<ScanSummary> {
-    return this.submitScan<ScanSummary>("/v1/scans/web", { url });
+  scanWeb(url: string, active = false): Promise<ScanSummary> {
+    return this.submitScan<ScanSummary>("/v1/scans/web", { url, active });
   }
 
   /** 스캔을 큐에 넣고(202) 완료될 때까지 폴링해 결과를 반환한다. */

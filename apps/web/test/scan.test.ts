@@ -90,11 +90,26 @@ describe("performIacScan", () => {
 describe("performWebScan", () => {
   const summary = { assetCount: 3, relationshipCount: 2, findingCount: 5, topScore: 58 };
 
-  it("성공 시 summary를 담은 success 상태 (스킴 없는 URL도 허용)", async () => {
+  it("성공 시 summary를 담은 success 상태 (스킴 없는 URL도 허용, 기본 passive)", async () => {
     const client = { scanWeb: vi.fn(async () => summary) };
     const state = await performWebScan(client, "example.com");
     expect(state).toEqual({ status: "success", summary });
-    expect(client.scanWeb).toHaveBeenCalledWith("example.com");
+    expect(client.scanWeb).toHaveBeenCalledWith("example.com", false);
+  });
+
+  it("능동 점검 요청은 active=true로 호출하고, 미검증이면 안내 메시지를 단다", async () => {
+    const skipped = {
+      ...summary,
+      ownershipVerified: false,
+      activeSkipped: true,
+      expectedToken: "omniguard-site-verification=abc",
+    };
+    const client = { scanWeb: vi.fn(async () => skipped) };
+    const state = await performWebScan(client, "example.com", true);
+    expect(client.scanWeb).toHaveBeenCalledWith("example.com", true);
+    expect(state.status).toBe("success");
+    expect(state.message).toContain("소유권 미검증");
+    expect(state.message).toContain("omniguard-site-verification=abc");
   });
 
   it("유효하지 않은 URL은 호출 없이 에러", async () => {

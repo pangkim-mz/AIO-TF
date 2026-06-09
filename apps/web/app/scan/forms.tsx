@@ -27,9 +27,17 @@ function ScanResult({ state }: { state: ScanState }): ReactNode {
     const text = state.summary
       ? `완료: 자산 ${state.summary.assetCount} · 관계 ${state.summary.relationshipCount} · 발견 ${state.summary.findingCount} · 최고점수 ${state.summary.topScore}.`
       : (state.message ?? "완료.");
+    // 능동 점검 미검증 등 부가 안내(summary가 있으면서 message도 있는 경우).
+    const note = state.summary && state.message ? state.message : null;
     return (
       <p role="status" className="notice">
         {text} <a href="/dashboard">대시보드 보기 →</a>
+        {note && (
+          <>
+            <br />
+            <span className="notice-note">⚠ {note}</span>
+          </>
+        )}
       </p>
     );
   }
@@ -123,6 +131,12 @@ export function WebScanForm({
         />
         <SubmitButton label={compact ? "URL 보안 점검" : "웹 점검"} />
       </div>
+      {!compact && (
+        <label className="checkbox-field" htmlFor="web-active">
+          <input id="web-active" name="active" type="checkbox" />
+          능동 점검 (서브도메인 열거·시크릿 스캔 — 도메인 소유권 DNS TXT 검증 필요)
+        </label>
+      )}
       <ScanResult state={state} />
     </form>
   );

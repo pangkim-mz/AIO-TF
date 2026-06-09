@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 173 passed / 4 skipped(Postgres 계약 4건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 176 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -48,7 +48,7 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
   `fingerprint.ts`(순수: script src→purl), `analyzeSite`(순수: web_asset+노출JS 자산+depends_on+TLS/헤더/SRI findings).
   노출 JS는 `software_component`로 emit해 `enrichWithOsv`가 CVE를 자동 부여(취약점 로직 재사용). 테스트는 SiteProbe 픽스처 주입(네트워크 없음).
   **능동 점검(Phase 2)**은 `activeScanUrl`이 오케스트레이션하며 **도메인 소유권(DNS TXT) 검증 후에만** 추가된다(안전장치): `ownership.ts`(`ownershipToken` 순수 결정론 파생 + `verifyOwnership` DNS TXT),
-  `secrets.ts`(순수 `scanSecrets` — 고유접두 시크릿 6종, 원문 마스킹), `subdomains.ts`(`enumerateSubdomains` 능동 DNS 열거 → `web_asset`+`contains` 엣지 + 순수 `classifyTakeover` CNAME→SaaS 탈취 후보). DNS/fetch 전부 주입 격리. 미검증이면 `activeSkipped:true`로 passive만. CLI `--active`/`--token`. **API/대시보드 미연결(다음 슬라이스).**
+  `secrets.ts`(순수 `scanSecrets` — 고유접두 시크릿 6종, 원문 마스킹), `subdomains.ts`(`enumerateSubdomains` 능동 DNS 열거 → `web_asset`+`contains` 엣지 + 순수 `classifyTakeover` CNAME→SaaS 탈취 후보). DNS/fetch 전부 주입 격리. 미검증이면 `activeSkipped:true`로 passive만. CLI `--active`/`--token`, **API `POST /v1/scans/web` `active:true`**(별도 job type 없이 `web` 잡에 플래그 — `runScanJob`이 `activeScanUrl`로 분기, `ScanSummary`에 `ownershipVerified`/`activeSkipped`/`expectedToken`, 워커 `activeScan` 주입점), **대시보드 `/scan` 능동 점검 체크박스**(미검증 시 ⚠ TXT 안내).
 - `packages/enrich-osv` — OSV.dev 보강(타임아웃·재시도·동시성 제한). 테스트는 Enricher 주입으로 네트워크 분리.
   CVSS 점수는 `src/cvss.ts`(순수 함수)가 v3.0/v3.1 벡터를 Base Score(0–10)로 계산해 `Finding.cvss`를 채우고,
   점수가 있으면 정성 등급 구간으로 severity 정밀화(없으면 GHSA 텍스트 라벨 폴백). v2/v4 미지원→폴백.
@@ -98,6 +98,9 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
   code=디버깅용, message=사용자용. 내부 오류 상세는 비노출.
 - 스캔은 비동기: `POST /v1/scans/*` → 202 `{jobId,status}`, `GET /v1/jobs/:id`로 폴링. web `ApiClient`는
   완료까지 서버측 폴링해 기존 동기형 UI 유지(`apps/web/lib/api.ts`).
+- 웹 능동 점검: `POST /v1/scans/web` 본문에 `active:true`(기본 false)를 주면 소유권(DNS TXT) 검증 후
+  서브도메인 열거·시크릿 스캔을 더한다. 결과 `ScanSummary`에 `ownershipVerified`/`activeSkipped`/`expectedToken`을 싣는다
+  (미검증이면 passive만 + 토큰 안내). 별도 job type가 아니라 `web` 잡의 플래그 — `runScanJob`이 `activeScanUrl`로 분기.
 
 ## 환경 주의사항 (Windows)
 
@@ -124,13 +127,15 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 1. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
 2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
-3. **connector-web Phase 2 — 능동 점검 API/웹 연결**(선택) — 커넥터 능동 점검은 완료(소유권 게이트·서브도메인 열거·시크릿·탈취, CLI `--active`/`--token`). 남은 것: API `POST /v1/scans/web`에 `active` 옵션 + 워커 `resolveTxt`/`resolveHost` 주입 + 대시보드 소유권 토큰 UX.
+3. **connector-web 능동 점검 고도화**(선택) — 능동 점검 CLI·API·대시보드 연결 완료(#32·#33). 남은 것: CT 로그 기반 서브도메인 전수 열거, 실제 takeover 점유 확인(현재 휴리스틱), 시크릿 스캔의 링크된 JS 본문 수집(현재 HTML 본문만).
 
 완료: **connector-web MVP + API/웹 연결**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web` +
 `POST /v1/scans/web`(`JOB_TYPES`에 `web`, `runWebScan`, 워커 `scanWeb` 주입) + 대시보드 `/scan` 웹 섹션·랜딩 히어로
 URL 입력창. web_asset 리터럴, TLS·보안헤더·노출JS(→OSV 재사용)·SRI),
 **connector-web Phase 2 능동 점검**(`activeScanUrl` — 소유권(DNS TXT) 게이트 후 서브도메인 열거·시크릿 스캔·CNAME 탈취 후보.
-`ownership.ts`·`secrets.ts`·`subdomains.ts`·`finding.ts`. CLI `--active`/`--token`. 네트워크 주입 격리, 코어 0줄. API/대시보드는 다음 슬라이스),
+`ownership.ts`·`secrets.ts`·`subdomains.ts`·`finding.ts`. CLI `--active`/`--token`. 네트워크 주입 격리, 코어 0줄)
+**+ 능동 점검 API/웹 연결**(`web` 잡에 `active` 플래그, `runScanJob`→`activeScanUrl` 분기, `ScanSummary` 소유권 메타,
+워커 `activeScan` 주입, `/scan` 능동 점검 체크박스 + 미검증 ⚠ 안내),
 **대시보드 발견·영향도 펼침 상세**(`lib/findings.ts`·`lib/impact.ts` 순수 조립 + `findings-table.tsx`·`impact-table.tsx`
 클라이언트 펼침. 발견=요약 바+설명·점수 분해·전파, 영향도=자체↔전파·근원·직접 발견. 새 API 0, 코어 0줄),
 **OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),

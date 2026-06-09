@@ -17,7 +17,12 @@ import {
   buildTopology,
   parseServiceManifestContent,
 } from "@omniguard/connector-service";
-import { scanUrl, type WebScan } from "@omniguard/connector-web";
+import {
+  scanUrl,
+  activeScanUrl,
+  type WebScan,
+  type ActiveWebScan,
+} from "@omniguard/connector-web";
 import type { Job, Repository } from "@omniguard/storage";
 
 /** 자산 → 취약점 보강 함수. 기본은 OSV 호출, 테스트에서는 주입으로 대체. */
@@ -26,8 +31,14 @@ export type Enricher = (
   tenantId: string,
 ) => Promise<Finding[]>;
 
-/** URL → 웹 점검 결과. 기본은 네트워크 호출(scanUrl), 테스트에서는 주입으로 대체. */
+/** URL → 웹 점검 결과(passive). 기본은 네트워크 호출(scanUrl), 테스트에서는 주입으로 대체. */
 export type WebScanner = (url: string, tenantId: string) => Promise<WebScan>;
+
+/** URL → 능동 점검 결과(소유권 게이트 포함). 기본은 activeScanUrl, 테스트는 주입. */
+export type ActiveWebScanner = (
+  url: string,
+  tenantId: string,
+) => Promise<ActiveWebScan>;
 
 // ── 스캔 입력 본문 스키마(검증은 enqueue 시점, 실행은 워커에서) ──
 export const ScanVendorBody = z.object({
@@ -51,6 +62,8 @@ export const ScanServiceBody = z.object({
 
 export const ScanWebBody = z.object({
   url: z.string().min(1), // 점검 대상 URL(스킴 없으면 https로 정규화)
+  /** 능동 점검(서브도메인 열거·시크릿 스캔). 소유권(DNS TXT) 검증 시에만 실제 수행. */
+  active: z.boolean().default(false),
 });
 
 export interface ScanSummary {
@@ -58,6 +71,12 @@ export interface ScanSummary {
   relationshipCount: number;
   findingCount: number;
   topScore: number;
+  /** 능동 점검 요청 시: 도메인 소유권(DNS TXT) 검증 여부. */
+  ownershipVerified?: boolean;
+  /** 능동 점검 요청했으나 소유권 미검증으로 능동 점검을 건너뛰었는가. */
+  activeSkipped?: boolean;
+  /** 능동 점검 미검증 시 사용자가 DNS에 추가할 TXT 토큰(검증 안내용). */
+  expectedToken?: string;
 }
 
 export interface ServiceSummary {
@@ -168,15 +187,28 @@ async function runIacScan(
 /**
  * URL을 점검한다: web_asset + 노출 JS 자산/엣지 + TLS·헤더·SRI findings(커넥터) +
  * 노출 JS의 CVE(enrich 재사용). 커넥터 findings는 영속화 id로 재매핑한다(CLI web.ts와 동일).
+ * active=true면 소유권(DNS TXT) 검증 후 서브도메인 열거·시크릿 스캔을 더한다(미검증 시 passive만).
  */
 async function runWebScan(
   repo: Repository,
   enrich: Enricher,
   tenantId: string,
-  url: string,
+  body: { url: string; active: boolean },
   scanWeb: WebScanner,
+  activeScan: ActiveWebScanner,
 ): Promise<ScanSummary> {
-  const scanned = await scanWeb(url, tenantId);
+  let scanned: WebScan;
+  let ownership: ActiveWebScan["ownership"] | undefined;
+  let activeSkipped: boolean | undefined;
+  if (body.active) {
+    const result = await activeScan(body.url, tenantId);
+    scanned = result;
+    ownership = result.ownership;
+    activeSkipped = result.activeSkipped;
+  } else {
+    scanned = await scanWeb(body.url, tenantId);
+  }
+
   const assets = await repo.upsertAssets(tenantId, scanned.assets);
   const idMap = new Map(scanned.assets.map((a, i) => [a.id, assets[i]!.id]));
   const remappedRels = scanned.relationships.map((r) => ({
@@ -202,6 +234,11 @@ async function runWebScan(
     relationshipCount: relationships.length,
     findingCount: findings.length,
     topScore,
+    ...(ownership && {
+      ownershipVerified: ownership.verified,
+      activeSkipped,
+      expectedToken: ownership.expectedToken,
+    }),
   };
 }
 
@@ -235,6 +272,7 @@ export async function runScanJob(
   enrich: Enricher,
   job: Job,
   scanWeb: WebScanner = scanUrl,
+  activeScan: ActiveWebScanner = activeScanUrl,
 ): Promise<ScanSummary | ServiceSummary> {
   const { tenantId, type, payload } = job;
   switch (type) {
@@ -249,7 +287,7 @@ export async function runScanJob(
     case "service":
       return runServiceScan(repo, tenantId, ScanServiceBody.parse(payload).manifest);
     case "web":
-      return runWebScan(repo, enrich, tenantId, ScanWebBody.parse(payload).url, scanWeb);
+      return runWebScan(repo, enrich, tenantId, ScanWebBody.parse(payload), scanWeb, activeScan);
   }
 }
 

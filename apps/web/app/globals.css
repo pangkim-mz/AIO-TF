@@ -191,6 +191,26 @@ th.num {
   font-size: 0.85rem;
 }
 
+.notice-note {
+  color: var(--warn, var(--muted));
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.scan-form input[type="checkbox"] {
+  width: auto;
+  margin-top: 0.15rem;
+}
+
 .muted {
   color: var(--muted);
 }

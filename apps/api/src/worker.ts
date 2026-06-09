@@ -1,6 +1,11 @@
 import { now } from "@omniguard/schema";
 import type { JobQueue, Repository } from "@omniguard/storage";
-import { type Enricher, type WebScanner, runScanJob } from "./scans";
+import {
+  type ActiveWebScanner,
+  type Enricher,
+  type WebScanner,
+  runScanJob,
+} from "./scans";
 
 export interface WorkerDeps {
   queue: JobQueue;
@@ -8,6 +13,8 @@ export interface WorkerDeps {
   enrich: Enricher;
   /** URL 점검 함수(web 스캔용). 미지정 시 실제 네트워크 호출(scanUrl). 테스트는 주입. */
   scanWeb?: WebScanner;
+  /** 능동 점검 함수(web active). 미지정 시 실제 호출(activeScanUrl). 테스트는 주입. */
+  activeScan?: ActiveWebScanner;
   /** 폴링 간격(ms). 대기 작업이 없을 때만 쉰다. 기본 200ms. */
   pollIntervalMs?: number;
   /** 최대 시도 횟수. 이 횟수만큼 실패하면 영구 실패 처리. 기본 3. */
@@ -69,6 +76,7 @@ export class ScanWorker {
         this.deps.enrich,
         job,
         this.deps.scanWeb,
+        this.deps.activeScan,
       );
       await this.deps.queue.complete(job.id, result);
     } catch (error) {
