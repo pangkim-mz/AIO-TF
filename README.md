@@ -57,6 +57,10 @@ $env:DATABASE_URL="postgres://..."; $env:TENANT_ID="<tenant>"; pnpm scan:service
 
 # 웹 노출 표면 스캔 (EASM/웹공급망: TLS·보안헤더·노출 JS(→OSV)·SRI)
 pnpm scan:web https://example.com
+
+# 능동 점검 — 도메인 소유권(DNS TXT) 검증 시 서브도메인 열거·시크릿·탈취 후보 추가
+pnpm scan:web https://example.com --token    # 먼저 DNS TXT 레코드 확인(TENANT_ID 고정)
+pnpm scan:web https://example.com --active   # 소유권 검증되면 능동 점검, 아니면 passive만
 ```
 
 ## 영속화 (멀티테넌트)

@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 160 passed / 4 skipped(Postgres 계약 4건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 173 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -22,6 +22,8 @@ pnpm scan:vendor <vendors.yaml>       # 벤더/서드파티 컴플라이언스
 pnpm scan:iac <plan.json>             # Terraform plan JSON
 pnpm scan:service <services.yaml>     # 도메인 간 엣지 연결(영속화된 자산 대상 → DATABASE_URL/TENANT_ID 권장)
 pnpm scan:web <url>                   # 웹 노출 표면(EASM/웹공급망) — TLS·보안헤더·노출JS(→OSV)·SRI
+pnpm scan:web <url> --active          # 능동 점검(소유권 검증 시 서브도메인 열거·시크릿·탈취 후보 추가)
+pnpm scan:web <url> --token           # 소유권 검증용 DNS TXT 레코드 출력(스캔 안 함, TENANT_ID 고정 권장)
 
 # HTTP API (Fastify, 포트 3000)
 pnpm serve         # OMNIGUARD_TOKENS 미설정 시 dev-token/admin 발급
@@ -45,6 +47,8 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
   추가했다 — 유니온의 의도된 additive 확장점(기존 4타입 불변). `probe.ts`(네트워크 side-effect: 내장 `fetch`+`node:tls`),
   `fingerprint.ts`(순수: script src→purl), `analyzeSite`(순수: web_asset+노출JS 자산+depends_on+TLS/헤더/SRI findings).
   노출 JS는 `software_component`로 emit해 `enrichWithOsv`가 CVE를 자동 부여(취약점 로직 재사용). 테스트는 SiteProbe 픽스처 주입(네트워크 없음).
+  **능동 점검(Phase 2)**은 `activeScanUrl`이 오케스트레이션하며 **도메인 소유권(DNS TXT) 검증 후에만** 추가된다(안전장치): `ownership.ts`(`ownershipToken` 순수 결정론 파생 + `verifyOwnership` DNS TXT),
+  `secrets.ts`(순수 `scanSecrets` — 고유접두 시크릿 6종, 원문 마스킹), `subdomains.ts`(`enumerateSubdomains` 능동 DNS 열거 → `web_asset`+`contains` 엣지 + 순수 `classifyTakeover` CNAME→SaaS 탈취 후보). DNS/fetch 전부 주입 격리. 미검증이면 `activeSkipped:true`로 passive만. CLI `--active`/`--token`. **API/대시보드 미연결(다음 슬라이스).**
 - `packages/enrich-osv` — OSV.dev 보강(타임아웃·재시도·동시성 제한). 테스트는 Enricher 주입으로 네트워크 분리.
   CVSS 점수는 `src/cvss.ts`(순수 함수)가 v3.0/v3.1 벡터를 Base Score(0–10)로 계산해 `Finding.cvss`를 채우고,
   점수가 있으면 정성 등급 구간으로 severity 정밀화(없으면 GHSA 텍스트 라벨 폴백). v2/v4 미지원→폴백.
@@ -120,11 +124,13 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 
 1. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
 2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
-3. **connector-web Phase 2**(선택) — 능동 점검(서브도메인 열거·시크릿 스캔) + 도메인 소유권 검증(DNS TXT).
+3. **connector-web Phase 2 — 능동 점검 API/웹 연결**(선택) — 커넥터 능동 점검은 완료(소유권 게이트·서브도메인 열거·시크릿·탈취, CLI `--active`/`--token`). 남은 것: API `POST /v1/scans/web`에 `active` 옵션 + 워커 `resolveTxt`/`resolveHost` 주입 + 대시보드 소유권 토큰 UX.
 
 완료: **connector-web MVP + API/웹 연결**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web` +
 `POST /v1/scans/web`(`JOB_TYPES`에 `web`, `runWebScan`, 워커 `scanWeb` 주입) + 대시보드 `/scan` 웹 섹션·랜딩 히어로
 URL 입력창. web_asset 리터럴, TLS·보안헤더·노출JS(→OSV 재사용)·SRI),
+**connector-web Phase 2 능동 점검**(`activeScanUrl` — 소유권(DNS TXT) 게이트 후 서브도메인 열거·시크릿 스캔·CNAME 탈취 후보.
+`ownership.ts`·`secrets.ts`·`subdomains.ts`·`finding.ts`. CLI `--active`/`--token`. 네트워크 주입 격리, 코어 0줄. API/대시보드는 다음 슬라이스),
 **대시보드 발견·영향도 펼침 상세**(`lib/findings.ts`·`lib/impact.ts` 순수 조립 + `findings-table.tsx`·`impact-table.tsx`
 클라이언트 펼침. 발견=요약 바+설명·점수 분해·전파, 영향도=자체↔전파·근원·직접 발견. 새 API 0, 코어 0줄),
 **OSV CVSS 숫자 점수 파싱**(`enrich-osv/src/cvss.ts`, v3.0/v3.1 Base Score, `Finding.cvss`·severity 정밀화, 코어 0줄),

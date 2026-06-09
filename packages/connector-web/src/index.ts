@@ -6,8 +6,24 @@ import {
   newId,
   now,
 } from "@omniguard/schema";
-import { fetchSiteProbe, type ProbeOptions, type SiteProbe } from "./probe";
+import {
+  fetchSiteProbe,
+  normalizeUrl,
+  type ProbeOptions,
+  type SiteProbe,
+} from "./probe";
 import { fingerprintScript, parseScripts } from "./fingerprint";
+import { SOURCE_ID, makeFinding } from "./finding";
+import { scanSecrets } from "./secrets";
+import {
+  verifyOwnership,
+  type OwnershipResult,
+  type TxtResolver,
+} from "./ownership";
+import {
+  enumerateSubdomains,
+  type HostResolver,
+} from "./subdomains";
 
 export {
   fetchSiteProbe,
@@ -22,8 +38,29 @@ export {
   type ScriptTag,
   type LibFingerprint,
 } from "./fingerprint";
+export {
+  ownershipToken,
+  verifyOwnership,
+  VERIFICATION_PREFIX,
+  type OwnershipResult,
+  type TxtResolver,
+} from "./ownership";
+export {
+  scanSecrets,
+  SECRET_PATTERNS,
+  type SecretMatch,
+  type SecretPattern,
+} from "./secrets";
+export {
+  enumerateSubdomains,
+  classifyTakeover,
+  COMMON_SUBDOMAINS,
+  type HostResolver,
+  type HostResolution,
+  type SubdomainScan,
+  type TakeoverRisk,
+} from "./subdomains";
 
-const SOURCE_ID = "connector-web";
 const ECOSYSTEM = "npm";
 /** TLS 1.2 미만은 약한 프로토콜로 본다. */
 const WEAK_PROTOCOLS = new Set(["TLSv1", "TLSv1.1", "SSLv3", "SSLv2"]);
@@ -111,7 +148,7 @@ export function analyzeSite(probe: SiteProbe, tenantId: string): WebScan {
     findings.push(
       makeFinding(
         tenantId,
-        web,
+        web.id,
         sourceFindingId,
         category,
         severity,
@@ -258,37 +295,6 @@ function evaluateSri(
   }
 }
 
-function makeFinding(
-  tenantId: string,
-  asset: Asset,
-  sourceFindingId: string,
-  category: Finding["category"],
-  severity: Severity,
-  title: string,
-  description: string,
-  raw: unknown,
-): Finding {
-  const ts = now();
-  return {
-    id: newId(),
-    tenantId,
-    firstSeen: ts,
-    lastSeen: ts,
-    sourceIds: [SOURCE_ID],
-    assetId: asset.id,
-    category,
-    sourceFindingId,
-    title,
-    description,
-    severity,
-    cvss: null,
-    status: "open",
-    detectedAt: ts,
-    resolvedAt: null,
-    raw,
-  };
-}
-
 /**
  * 단일 URL 점검 오케스트레이터 (네트워크 → 분석). CLI/API가 호출한다.
  * 자산을 영속화한 뒤 노출 JS(software_component)에 enrichWithOsv를 돌리면 CVE가 붙는다.
@@ -300,4 +306,77 @@ export async function scanUrl(
 ): Promise<WebScan> {
   const probe = await fetchSiteProbe(url, options);
   return analyzeSite(probe, tenantId);
+}
+
+/** 페이지 콘텐츠의 노출 시크릿을 web_asset에 부착되는 findings로 변환한다(순수 탐지 + 부착). */
+function buildSecretFindings(
+  content: string,
+  tenantId: string,
+  webAssetId: string,
+): Finding[] {
+  return scanSecrets(content).map((match) =>
+    makeFinding(
+      tenantId,
+      webAssetId,
+      `WEB-SECRET-EXPOSED:${match.patternId}:${match.redacted}`,
+      "misconfiguration",
+      match.severity,
+      `노출된 시크릿: ${match.label}`,
+      `페이지 소스에 ${match.label}로 보이는 값이 노출되어 있습니다 (${match.redacted}). 즉시 폐기·회전하세요.`,
+      { patternId: match.patternId, redacted: match.redacted },
+    ),
+  );
+}
+
+export interface ActiveScanOptions extends ProbeOptions {
+  resolveTxt?: TxtResolver;
+  resolveHost?: HostResolver;
+  subdomainWordlist?: readonly string[];
+}
+
+/** 능동 점검 결과 = 수동 점검(WebScan) + 소유권 검증 메타. */
+export interface ActiveWebScan extends WebScan {
+  ownership: OwnershipResult;
+  /** 소유권 미검증으로 능동 점검(서브도메인 열거·시크릿 스캔)을 건너뛰었는가. */
+  activeSkipped: boolean;
+}
+
+/**
+ * 능동 점검 오케스트레이터: 수동 점검(scanUrl 동급)에 더해, **도메인 소유권이
+ * DNS TXT로 검증된 경우에만** 서브도메인 열거·시크릿 스캔을 추가한다.
+ * 소유권 게이트는 타 도메인을 능동 스캔하지 않기 위한 안전장치다.
+ */
+export async function activeScanUrl(
+  url: string,
+  tenantId: string,
+  options: ActiveScanOptions = {},
+): Promise<ActiveWebScan> {
+  const target = normalizeUrl(url);
+  const ownership = await verifyOwnership(tenantId, target.hostname, {
+    resolveTxt: options.resolveTxt,
+  });
+
+  const probe = await fetchSiteProbe(url, options);
+  const base = analyzeSite(probe, tenantId);
+  const web = base.assets.find((a) => a.attributes.type === "web_asset")!;
+
+  if (!ownership.verified) {
+    return { ...base, ownership, activeSkipped: true };
+  }
+
+  const secretFindings = buildSecretFindings(probe.html, tenantId, web.id);
+  const subdomains = await enumerateSubdomains(
+    target.hostname,
+    tenantId,
+    web.id,
+    { resolveHost: options.resolveHost, wordlist: options.subdomainWordlist },
+  );
+
+  return {
+    assets: [...base.assets, ...subdomains.assets],
+    relationships: [...base.relationships, ...subdomains.relationships],
+    findings: [...base.findings, ...secretFindings, ...subdomains.findings],
+    ownership,
+    activeSkipped: false,
+  };
 }
