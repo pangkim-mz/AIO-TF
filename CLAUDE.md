@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 180 passed / 4 skipped(Postgres 계약 4건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 182 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔

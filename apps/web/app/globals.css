@@ -197,6 +197,11 @@ th.num {
   word-break: break-all;
 }
 
+.notice-info {
+  color: var(--ok, var(--muted));
+  font-size: 0.85rem;
+}
+
 .checkbox-field {
   display: flex;
   align-items: flex-start;

@@ -112,13 +112,20 @@ const stubActiveVerified: ActiveWebScanner = async (url, tenantId) => {
     title: "노출된 시크릿: AWS Access Key ID", description: "", severity: "CRITICAL", cvss: null,
     status: "open", detectedAt: ts, resolvedAt: null, raw: {},
   };
+  const takeover: Finding = {
+    id: newId(), tenantId, firstSeen: ts, lastSeen: ts, sourceIds: ["connector-web"],
+    assetId: sub.id, category: "misconfiguration",
+    sourceFindingId: "WEB-SUBDOMAIN-TAKEOVER:api.example.com",
+    title: "서브도메인 탈취 후보", description: "", severity: "HIGH", cvss: null,
+    status: "open", detectedAt: ts, resolvedAt: null, raw: {},
+  };
   return {
     assets: [...base.assets, sub],
     relationships: [
       ...base.relationships,
       { id: newId(), tenantId, fromAssetId: web.id, toAssetId: sub.id, type: "contains" as const },
     ],
-    findings: [...base.findings, secret],
+    findings: [...base.findings, secret, takeover],
     ownership: { hostname: "example.com", verified: true, expectedToken: "omniguard-site-verification=tok", error: null },
     activeSkipped: false,
   };
@@ -404,9 +411,13 @@ describe("OmniGuard API (비동기 스캔)", () => {
     expect(job.result.ownershipVerified).toBe(true);
     expect(job.result.activeSkipped).toBe(false);
     expect(job.result.assetCount).toBe(3); // web + jquery + 서브도메인
-    expect(job.result.findingCount).toBe(3); // 헤더 + jquery CVE + 시크릿
+    expect(job.result.findingCount).toBe(4); // 헤더 + jquery CVE + 시크릿 + 탈취
     // 시크릿(CRITICAL)이 최고 점수에 반영
     expect(job.result.topScore).toBeGreaterThan(0);
+    // 능동 점검 분해 카운트
+    expect(job.result.subdomainCount).toBe(1);
+    expect(job.result.takeoverCount).toBe(1);
+    expect(job.result.secretCount).toBe(1);
   });
 
   it("능동 web 스캔(소유권 미검증) → passive만, activeSkipped + 토큰 안내", async () => {
@@ -423,6 +434,8 @@ describe("OmniGuard API (비동기 스캔)", () => {
     expect(job.result.ownershipVerified).toBe(false);
     expect(job.result.expectedToken).toContain("omniguard-site-verification=");
     expect(job.result.assetCount).toBe(2); // web + jquery (서브도메인 없음)
+    // 미검증이면 능동 분해 카운트는 싣지 않는다
+    expect(job.result.subdomainCount).toBeUndefined();
   });
 
   it("재시도를 모두 소진한 스캔 오류는 작업을 failed로 만든다", async () => {

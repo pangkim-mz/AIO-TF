@@ -26,6 +26,12 @@ export interface ScanSummary {
   activeSkipped?: boolean;
   /** 능동 점검 미검증 시 DNS에 추가할 TXT 토큰(검증 안내용). */
   expectedToken?: string;
+  /** 능동 점검 수행 시: 발견된 서브도메인 수. */
+  subdomainCount?: number;
+  /** 능동 점검 수행 시: 서브도메인 탈취 후보 수. */
+  takeoverCount?: number;
+  /** 능동 점검 수행 시: 노출 시크릿 수. */
+  secretCount?: number;
 }
 
 export interface ServiceSummary {

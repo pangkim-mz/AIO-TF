@@ -77,7 +77,18 @@ export interface ScanSummary {
   activeSkipped?: boolean;
   /** 능동 점검 미검증 시 사용자가 DNS에 추가할 TXT 토큰(검증 안내용). */
   expectedToken?: string;
+  /** 능동 점검 수행 시: 발견된 서브도메인 수. */
+  subdomainCount?: number;
+  /** 능동 점검 수행 시: 서브도메인 탈취 후보 수. */
+  takeoverCount?: number;
+  /** 능동 점검 수행 시: 노출 시크릿 수. */
+  secretCount?: number;
 }
+
+// 능동 점검 분해 카운트용 식별자(connector-web의 자산 태그·sourceFindingId 접두와 일치).
+const SUBDOMAIN_TAG = "subdomain-enum";
+const TAKEOVER_PREFIX = "WEB-SUBDOMAIN-TAKEOVER";
+const SECRET_PREFIX = "WEB-SECRET-EXPOSED";
 
 export interface ServiceSummary {
   serviceCount: number;
@@ -238,6 +249,18 @@ async function runWebScan(
       ownershipVerified: ownership.verified,
       activeSkipped,
       expectedToken: ownership.expectedToken,
+    }),
+    // 능동 점검이 실제로 수행된 경우(검증됨)만 분해 카운트를 싣는다.
+    ...(ownership?.verified && {
+      subdomainCount: scanned.assets.filter(
+        (a) => a.attributes.type === "web_asset" && a.tags.source === SUBDOMAIN_TAG,
+      ).length,
+      takeoverCount: scanned.findings.filter((f) =>
+        f.sourceFindingId.startsWith(TAKEOVER_PREFIX),
+      ).length,
+      secretCount: scanned.findings.filter((f) =>
+        f.sourceFindingId.startsWith(SECRET_PREFIX),
+      ).length,
     }),
   };
 }

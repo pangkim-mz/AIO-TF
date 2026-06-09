@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ApiClientError } from "../lib/api";
 import {
+  activeScanSummary,
   performIacScan,
   performNpmScan,
   performServiceScan,
@@ -124,6 +125,26 @@ describe("performWebScan", () => {
     const state = await performWebScan(client, "   ");
     expect(state.status).toBe("error");
     expect(client.scanWeb).not.toHaveBeenCalled();
+  });
+});
+
+describe("activeScanSummary", () => {
+  const base = { assetCount: 5, relationshipCount: 4, findingCount: 6, topScore: 90 };
+
+  it("검증된 능동 점검은 분해 요약 문구를 만든다", () => {
+    const text = activeScanSummary({
+      ...base,
+      ownershipVerified: true,
+      subdomainCount: 3,
+      takeoverCount: 1,
+      secretCount: 2,
+    });
+    expect(text).toBe("능동 점검 수행됨 — 서브도메인 3 · 탈취 후보 1 · 노출 시크릿 2");
+  });
+
+  it("미검증/비능동(ownershipVerified가 true 아님)이면 null", () => {
+    expect(activeScanSummary({ ...base })).toBeNull();
+    expect(activeScanSummary({ ...base, ownershipVerified: false })).toBeNull();
   });
 });
 

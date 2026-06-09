@@ -15,6 +15,18 @@ export interface ScanState {
 
 export const initialScanState: ScanState = { status: "idle" };
 
+/**
+ * 능동 점검이 검증되어 수행된 경우의 분해 요약 문구를 만든다(순수 함수).
+ * 미검증/비능동(ownershipVerified가 true가 아님)이면 null.
+ */
+export function activeScanSummary(summary: ScanSummary): string | null {
+  if (summary.ownershipVerified !== true) return null;
+  const subdomains = summary.subdomainCount ?? 0;
+  const takeovers = summary.takeoverCount ?? 0;
+  const secrets = summary.secretCount ?? 0;
+  return `능동 점검 수행됨 — 서브도메인 ${subdomains} · 탈취 후보 ${takeovers} · 노출 시크릿 ${secrets}`;
+}
+
 type NpmScanner = { scanNpm(input: NpmScanInput): Promise<ScanSummary> };
 type VendorScanner = { scanVendor(inventory: string): Promise<ScanSummary> };
 type IacScanner = { scanIac(input: IacScanInput): Promise<ScanSummary> };

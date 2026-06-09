@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { type ScanState, initialScanState } from "../../lib/scan";
+import { type ScanState, activeScanSummary, initialScanState } from "../../lib/scan";
 
 type ScanAction = (prev: ScanState, formData: FormData) => Promise<ScanState>;
 
@@ -27,11 +27,19 @@ function ScanResult({ state }: { state: ScanState }): ReactNode {
     const text = state.summary
       ? `완료: 자산 ${state.summary.assetCount} · 관계 ${state.summary.relationshipCount} · 발견 ${state.summary.findingCount} · 최고점수 ${state.summary.topScore}.`
       : (state.message ?? "완료.");
-    // 능동 점검 미검증 등 부가 안내(summary가 있으면서 message도 있는 경우).
+    // 능동 점검(검증)이 수행된 경우의 분해 요약(✅) — 미검증/비능동이면 null.
+    const activeInfo = state.summary ? activeScanSummary(state.summary) : null;
+    // 능동 점검 미검증 등 부가 경고(summary가 있으면서 message도 있는 경우).
     const note = state.summary && state.message ? state.message : null;
     return (
       <p role="status" className="notice">
         {text} <a href="/dashboard">대시보드 보기 →</a>
+        {activeInfo && (
+          <>
+            <br />
+            <span className="notice-info">✅ {activeInfo}</span>
+          </>
+        )}
         {note && (
           <>
             <br />
