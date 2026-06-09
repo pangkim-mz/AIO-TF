@@ -23,6 +23,8 @@ import {
 import {
   enumerateSubdomains,
   type HostResolver,
+  type CtSource,
+  type TakeoverProbe,
 } from "./subdomains";
 
 export {
@@ -54,9 +56,14 @@ export {
 export {
   enumerateSubdomains,
   classifyTakeover,
+  confirmTakeover,
+  parseCrtShNames,
   COMMON_SUBDOMAINS,
   type HostResolver,
   type HostResolution,
+  type CtSource,
+  type TakeoverProbe,
+  type EnumerateOptions,
   type SubdomainScan,
   type TakeoverRisk,
 } from "./subdomains";
@@ -332,6 +339,10 @@ export interface ActiveScanOptions extends ProbeOptions {
   resolveTxt?: TxtResolver;
   resolveHost?: HostResolver;
   subdomainWordlist?: readonly string[];
+  /** 서브도메인 후보 외부 소스(CT 로그 등). 미지정 시 crt.sh. 테스트는 주입. */
+  ctSource?: CtSource;
+  /** 탈취 후보 미점유 확증용 본문 프로브. 미지정 시 HTTPS fetch. 테스트는 주입. */
+  takeoverProbe?: TakeoverProbe;
 }
 
 /** 능동 점검 결과 = 수동 점검(WebScan) + 소유권 검증 메타. */
@@ -365,12 +376,12 @@ export async function activeScanUrl(
   }
 
   const secretFindings = buildSecretFindings(probe.html, tenantId, web.id);
-  const subdomains = await enumerateSubdomains(
-    target.hostname,
-    tenantId,
-    web.id,
-    { resolveHost: options.resolveHost, wordlist: options.subdomainWordlist },
-  );
+  const subdomains = await enumerateSubdomains(target.hostname, tenantId, web.id, {
+    resolveHost: options.resolveHost,
+    wordlist: options.subdomainWordlist,
+    ctSource: options.ctSource,
+    takeoverProbe: options.takeoverProbe,
+  });
 
   return {
     assets: [...base.assets, ...subdomains.assets],

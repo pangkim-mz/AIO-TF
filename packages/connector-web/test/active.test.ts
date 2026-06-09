@@ -6,10 +6,15 @@ import {
   VERIFICATION_PREFIX,
   scanSecrets,
   classifyTakeover,
+  confirmTakeover,
+  parseCrtShNames,
   enumerateSubdomains,
   activeScanUrl,
   type HostResolution,
 } from "../src/index";
+
+/** 네트워크 없는 테스트를 위한 no-op CT 소스(crt.sh 호출 차단). */
+const noCt = async (): Promise<string[]> => [];
 
 describe("ownershipToken", () => {
   it("같은 (테넌트, 호스트)에 결정론적 토큰을 만들고 접두사를 붙인다", () => {
@@ -117,6 +122,8 @@ describe("enumerateSubdomains (resolveHost 주입)", () => {
     const scan = await enumerateSubdomains("example.com", tenant, parentId, {
       resolveHost,
       wordlist: ["api", "old", "www"],
+      ctSource: noCt,
+      takeoverProbe: async () => null, // 미점유 확증 안 됨 → 휴리스틱 HIGH 유지
     });
     expect(scan.assets.map((a) => a.name).sort()).toEqual([
       "api.example.com",
@@ -132,6 +139,59 @@ describe("enumerateSubdomains (resolveHost 주입)", () => {
       "WEB-SUBDOMAIN-TAKEOVER:old.example.com",
     );
     expect(scan.findings[0]!.severity).toBe("HIGH");
+  });
+
+  it("CT 로그 후보를 합치고, 본문 지문으로 미점유가 확증되면 CRITICAL로 격상한다", async () => {
+    const parentId = newId();
+    const tenant = newId();
+    // 워드리스트엔 없지만 CT 로그가 알려주는 서브도메인(dangling S3)
+    const ctSource = async () => ["legacy.example.com", "example.com"]; // apex는 무시됨
+    const resolveHost = async (hostname: string): Promise<HostResolution | null> =>
+      hostname === "legacy.example.com"
+        ? { hostname, addresses: [], cname: "old-bucket.s3.amazonaws.com" }
+        : null;
+    const takeoverProbe = async () => "<Error><Code>NoSuchBucket</Code></Error>";
+    const scan = await enumerateSubdomains("example.com", tenant, parentId, {
+      resolveHost,
+      wordlist: ["www"], // www는 미존재(null)
+      ctSource,
+      takeoverProbe,
+    });
+    expect(scan.assets.map((a) => a.name)).toEqual(["legacy.example.com"]);
+    expect(scan.findings).toHaveLength(1);
+    const f = scan.findings[0]!;
+    expect(f.severity).toBe("CRITICAL");
+    expect(f.title).toContain("확증");
+    expect((f.raw as { confirmed: boolean }).confirmed).toBe(true);
+  });
+});
+
+describe("parseCrtShNames", () => {
+  it("name_value(줄바꿈·와일드카드)에서 루트의 서브도메인만 추출·중복 제거한다", () => {
+    const payload = [
+      { name_value: "*.example.com\napi.example.com" },
+      { name_value: "api.example.com" }, // 중복
+      { name_value: "www.example.com" },
+      { name_value: "other.org" }, // 타 도메인 제외
+      { name_value: "example.com" }, // apex 제외
+    ];
+    expect(parseCrtShNames(payload, "example.com").sort()).toEqual([
+      "api.example.com",
+      "www.example.com",
+    ]);
+  });
+
+  it("배열이 아니면 빈 결과", () => {
+    expect(parseCrtShNames(null, "example.com")).toEqual([]);
+    expect(parseCrtShNames({}, "example.com")).toEqual([]);
+  });
+});
+
+describe("confirmTakeover", () => {
+  it("미점유 지문이 본문에 있으면 true, 없거나 미지원 서비스면 false", () => {
+    expect(confirmTakeover("AWS S3", "<Code>NoSuchBucket</Code>")).toBe(true);
+    expect(confirmTakeover("AWS S3", "정상 페이지")).toBe(false);
+    expect(confirmTakeover("Unknown SaaS", "NoSuchBucket")).toBe(false);
   });
 });
 
@@ -171,6 +231,7 @@ describe("activeScanUrl (소유권 게이트)", () => {
       resolveTxt,
       resolveHost,
       subdomainWordlist: ["api", "www"],
+      ctSource: noCt,
     });
     expect(scan.activeSkipped).toBe(false);
     expect(
