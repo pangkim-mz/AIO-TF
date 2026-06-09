@@ -117,6 +117,12 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 - **로컬 구동 env는 PowerShell 문법으로**: `PORT=3001 ... pnpm web:dev`(bash)는 PowerShell에서
   파싱 에러 → `$env:PORT="3001"; $env:API_BASE_URL="http://127.0.0.1:3000"; $env:API_TOKEN="dev-token"; pnpm web:dev`.
   API(:3000)와 대시보드(:3001)는 **별도 터미널 2개**로, API를 먼저 띄운다(구동 절차는 README·PROJECT_NOTES §6에 bash·PS 병기).
+- **사내 프록시(MITM) TLS — 웹 스캔 fetch 실패 시**: connector-web의 외부 `fetch`(probe·CT·takeover·OSV)가
+  `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`로 실패하면(대시보드 web 스캔 `scan_failed`) 사내 프록시가 TLS를 가로채는데
+  Node가 그 루트 CA를 안 믿는 것. **API 프로세스(워커가 fetch함)를 `$env:NODE_OPTIONS="--use-system-ca"; pnpm serve`로**
+  띄우면 Windows 인증서 저장소(사내 CA 포함)를 써서 해결된다(Node 22+/24 검증). 저장소에 없으면
+  `$env:NODE_EXTRA_CA_CERTS="C:\경로\corp-ca.pem"`(정석), 최후수단 `$env:NODE_TLS_REJECT_UNAUTHORIZED="0"`(개발 전용·비권장).
+  CLI도 동일(`$env:NODE_OPTIONS="--use-system-ca"; pnpm scan:web <url>`). 코드 버그 아님 — 실행 환경 설정.
 
 ## 컨벤션
 
