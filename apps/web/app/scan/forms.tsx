@@ -1,10 +1,54 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { type ScanState, activeScanSummary, initialScanState } from "../../lib/scan";
 
 type ScanAction = (prev: ScanState, formData: FormData) => Promise<ScanState>;
+
+const IAC_COMMANDS = [
+  "terraform init",
+  "terraform plan -out=tfplan",
+  "terraform show -json tfplan > plan.json",
+].join("\n");
+
+const COPY_RESET_MS = 2000;
+
+export function IacCommandGuide(): ReactNode {
+  const [copied, setCopied] = useState(false);
+
+  async function copyCommands(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(IAC_COMMANDS);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), COPY_RESET_MS);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="cmd-guide">
+      <p className="cmd-guide-intro">
+        Terraform 검사를 위해 터미널에서 아래 명령어를 순서대로 실행한 뒤, 생성된{" "}
+        <code>plan.json</code> 파일 내용을 아래 입력란에 붙여넣어 주세요.
+      </p>
+      <div className="code-block">
+        <button
+          type="button"
+          className="code-copy"
+          onClick={copyCommands}
+          aria-label="명령어 복사"
+        >
+          {copied ? "복사됨 ✓" : "복사"}
+        </button>
+        <pre>
+          <code>{IAC_COMMANDS}</code>
+        </pre>
+      </div>
+    </div>
+  );
+}
 
 function SubmitButton({ label }: { label: string }): ReactNode {
   const { pending } = useFormStatus();
