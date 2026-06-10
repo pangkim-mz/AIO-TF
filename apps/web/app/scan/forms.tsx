@@ -12,14 +12,38 @@ const IAC_COMMANDS = [
   "terraform show -json tfplan > plan.json",
 ].join("\n");
 
+// /scan IaC 섹션의 "GitHub 자동 연동" 안내에 표시하는 워크플로 스니펫.
+// JS 문자열이라 GitHub Actions 표현식(${{ }})은 그대로 출력된다(보간 아님).
+const GITHUB_WORKFLOW = `# .github/workflows/omniguard.yml
+name: OmniGuard IaC Scan
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  iac-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: OmniGuard IaC Scan
+        uses: pangkim-mz/AIO-TF/examples/github-action@main
+        with:
+          omniguard-url: \${{ vars.OMNIGUARD_URL }}
+          omniguard-token: \${{ secrets.OMNIGUARD_TOKEN }}
+          working-directory: infra
+          stack-name: production`;
+
 const COPY_RESET_MS = 2000;
 
-export function IacCommandGuide(): ReactNode {
+// 코드 블록 + 복사 버튼. 클립보드 복사 시 일시적으로 "복사됨 ✓"을 보인다.
+function CopyableCode({ code, label }: { code: string; label: string }): ReactNode {
   const [copied, setCopied] = useState(false);
 
-  async function copyCommands(): Promise<void> {
+  async function copy(): Promise<void> {
     try {
-      await navigator.clipboard.writeText(IAC_COMMANDS);
+      await navigator.clipboard.writeText(code);
       setCopied(true);
       window.setTimeout(() => setCopied(false), COPY_RESET_MS);
     } catch {
@@ -28,25 +52,41 @@ export function IacCommandGuide(): ReactNode {
   }
 
   return (
+    <div className="code-block">
+      <button type="button" className="code-copy" onClick={copy} aria-label={label}>
+        {copied ? "복사됨 ✓" : "복사"}
+      </button>
+      <pre>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+export function IacCommandGuide(): ReactNode {
+  return (
     <div className="cmd-guide">
       <p className="cmd-guide-intro">
         Terraform 검사를 위해 터미널에서 아래 명령어를 순서대로 실행한 뒤, 생성된{" "}
         <code>plan.json</code> 파일 내용을 아래 입력란에 붙여넣어 주세요.
       </p>
-      <div className="code-block">
-        <button
-          type="button"
-          className="code-copy"
-          onClick={copyCommands}
-          aria-label="명령어 복사"
-        >
-          {copied ? "복사됨 ✓" : "복사"}
-        </button>
-        <pre>
-          <code>{IAC_COMMANDS}</code>
-        </pre>
-      </div>
+      <CopyableCode code={IAC_COMMANDS} label="명령어 복사" />
     </div>
+  );
+}
+
+export function GithubActionGuide(): ReactNode {
+  return (
+    <details className="cmd-guide gh-guide">
+      <summary>GitHub로 자동 연동 (수동 붙여넣기 없이)</summary>
+      <p className="cmd-guide-intro">
+        고객 레포의 CI에 아래 워크플로를 추가하면, 푸시/PR마다 Terraform plan을 떠서
+        OmniGuard로 자동 스캔합니다. 클라우드 자격증명은 고객 CI 밖으로 나가지 않습니다
+        (plan.json만 전송). 레포 시크릿 <code>OMNIGUARD_TOKEN</code>에 발급한 토큰을, 변수{" "}
+        <code>OMNIGUARD_URL</code>에 API 주소를 넣어 주세요.
+      </p>
+      <CopyableCode code={GITHUB_WORKFLOW} label="워크플로 YAML 복사" />
+    </details>
   );
 }
 

@@ -272,6 +272,25 @@ th.num {
   background: var(--bg);
 }
 
+.gh-guide {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.7rem;
+  background: var(--panel);
+}
+
+.gh-guide > summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  list-style-position: inside;
+}
+
+.gh-guide[open] > summary {
+  margin-bottom: 0.6rem;
+}
+
 .muted {
   color: var(--muted);
 }

@@ -1,0 +1,128 @@
+name: "OmniGuard IaC Scan"
+description: >-
+  Terraform plan을 생성해 OmniGuard로 업로드하고 인프라(IaC) 리스크 스캔을 실행한다.
+  클라우드 credentials는 이 CI 밖으로 나가지 않는다(plan.json만 전송). 백엔드는
+  POST /v1/scans/iac → GET /v1/jobs/:id 폴링(비동기 큐)으로 동작한다.
+author: "OmniGuard"
+
+inputs:
+  omniguard-url:
+    description: "OmniGuard API base URL (예: https://omniguard.example.com)"
+    required: true
+  omniguard-token:
+    description: "OmniGuard API 토큰. 레포 시크릿 OMNIGUARD_TOKEN으로 전달한다."
+    required: true
+  working-directory:
+    description: "terraform init/plan을 실행할 디렉터리"
+    required: false
+    default: "."
+  stack-name:
+    description: "스택 이름(선택). OmniGuard 자산 식별에 쓰인다."
+    required: false
+    default: ""
+  terraform-version:
+    description: "설치할 Terraform 버전(setup-terraform). 기본은 최신."
+    required: false
+    default: "latest"
+  poll-timeout-seconds:
+    description: "스캔 완료 폴링 최대 대기(초)."
+    required: false
+    default: "180"
+
+outputs:
+  job-id:
+    description: "생성된 스캔 작업 ID"
+    value: ${{ steps.submit.outputs.job-id }}
+  status:
+    description: "스캔 작업의 최종 상태(succeeded/failed)"
+    value: ${{ steps.poll.outputs.status }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+
+    - name: Terraform plan → plan.json
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        terraform init -input=false
+        terraform plan -input=false -out=tfplan
+        terraform show -json tfplan > plan.json
+        echo "plan.json 생성: $(wc -c < plan.json) bytes"
+
+    - name: OmniGuard에 스캔 제출
+      id: submit
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        OMNIGUARD_URL: ${{ inputs.omniguard-url }}
+        OMNIGUARD_TOKEN: ${{ inputs.omniguard-token }}
+        STACK_NAME: ${{ inputs.stack-name }}
+      run: |
+        set -euo pipefail
+        # plan.json을 안전하게 JSON 본문으로 감싼다(따옴표/개행 이스케이프는 jq가 처리).
+        if [ -n "$STACK_NAME" ]; then
+          jq -n --rawfile plan plan.json --arg stack "$STACK_NAME" \
+            '{plan: $plan, stackName: $stack}' > payload.json
+        else
+          jq -n --rawfile plan plan.json '{plan: $plan}' > payload.json
+        fi
+
+        response="$(curl -sS -X POST "${OMNIGUARD_URL%/}/v1/scans/iac" \
+          -H "Authorization: Bearer ${OMNIGUARD_TOKEN}" \
+          -H "Content-Type: application/json" \
+          --data-binary @payload.json)"
+
+        ok="$(echo "$response" | jq -r '.ok')"
+        if [ "$ok" != "true" ]; then
+          echo "::error::스캔 제출 실패: $(echo "$response" | jq -r '.error.message // .')"
+          exit 1
+        fi
+
+        job_id="$(echo "$response" | jq -r '.data.jobId')"
+        echo "job-id=$job_id" >> "$GITHUB_OUTPUT"
+        echo "작업 큐 등록됨: $job_id"
+
+    - name: 스캔 완료 폴링
+      id: poll
+      shell: bash
+      env:
+        OMNIGUARD_URL: ${{ inputs.omniguard-url }}
+        OMNIGUARD_TOKEN: ${{ inputs.omniguard-token }}
+        JOB_ID: ${{ steps.submit.outputs.job-id }}
+        TIMEOUT: ${{ inputs.poll-timeout-seconds }}
+      run: |
+        set -euo pipefail
+        deadline=$(( SECONDS + TIMEOUT ))
+        status="queued"
+        while [ "$SECONDS" -lt "$deadline" ]; do
+          job="$(curl -sS "${OMNIGUARD_URL%/}/v1/jobs/${JOB_ID}" \
+            -H "Authorization: Bearer ${OMNIGUARD_TOKEN}")"
+          status="$(echo "$job" | jq -r '.data.status')"
+          case "$status" in
+            succeeded)
+              echo "status=succeeded" >> "$GITHUB_OUTPUT"
+              echo "✅ 스캔 완료"
+              echo "$job" | jq '.data.result'
+              exit 0
+              ;;
+            failed)
+              echo "status=failed" >> "$GITHUB_OUTPUT"
+              echo "::error::스캔 실패: $(echo "$job" | jq -r '.data.error // "unknown"')"
+              exit 1
+              ;;
+            *)
+              echo "대기 중… (status=$status)"
+              sleep 5
+              ;;
+          esac
+        done
+        echo "status=$status" >> "$GITHUB_OUTPUT"
+        echo "::error::폴링 타임아웃(${TIMEOUT}s) — 마지막 상태: $status"
+        exit 1

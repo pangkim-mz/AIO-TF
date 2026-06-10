@@ -1,0 +1,35 @@
+# 고객(타 프로젝트) 레포의 .github/workflows/omniguard.yml 에 넣을 예시.
+# 푸시/PR마다 Terraform plan을 떠서 OmniGuard로 인프라 리스크를 스캔한다.
+# 클라우드 credentials는 이 CI 안에서만 쓰이고 plan.json만 OmniGuard로 전송된다.
+name: OmniGuard IaC Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  iac-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 클라우드 자격증명은 고객 CI 시크릿으로 주입(예: AWS).
+      # plan 생성에만 쓰이고 OmniGuard로는 나가지 않는다.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: OmniGuard IaC Scan
+        # 모노레포 경로 사용 예시. 별도 공개 레포로 분리하면 owner/omniguard-action@v1 형태.
+        uses: pangkim-mz/AIO-TF/examples/github-action@main
+        with:
+          omniguard-url: ${{ vars.OMNIGUARD_URL }}
+          omniguard-token: ${{ secrets.OMNIGUARD_TOKEN }}
+          working-directory: infra
+          stack-name: production

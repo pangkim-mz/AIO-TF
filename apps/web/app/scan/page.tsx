@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  GithubActionGuide,
   IacCommandGuide,
   IacScanForm,
   NpmScanForm,
@@ -36,6 +37,7 @@ export default function ScanPage(): ReactNode {
         </section>
         <section>
           <h2>클라우드 / 인프라 (IaC)</h2>
+          <GithubActionGuide />
           <IacCommandGuide />
           <IacScanForm action={scanIacAction} />
         </section>
