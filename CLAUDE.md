@@ -134,8 +134,14 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
 1. **큐 고도화**(선택) — 재시도/지수 백오프·리스 stuck 회수 완료. 남은 것: 데드레터(DLQ), 별도 워커 프로세스(`apps/worker`), 외부 큐.
 2. **CVSS v2/v4 점수 지원**(선택) — v3.0/v3.1은 완료(`enrich-osv/src/cvss.ts`). v2·v4는 미지원→텍스트 폴백.
 3. **connector-web 시크릿 JS 본문 수집**(선택) — 능동 점검(CLI·API·대시보드)·CT 로그 열거·takeover 확증 완료(#32·#33·#34). 남은 것: 시크릿 스캔이 링크된 외부 JS 본문도 수집(현재 페이지 HTML만). 착수: `connector-web/src/index.ts` `activeScanUrl` + `secrets.ts`.
+4. **GitHub Action PR 코멘트/게이트**(선택) — IaC 연동 최소(`examples/github-action`, 아래 완료)에 더해 Action이 스캔 결과를 PR에 코멘트 + Critical 발견 시 CI fail. GitHub 토큰 권한 추가 필요(API 토큰만으로는 불가).
 
-완료: **connector-web MVP + API/웹 연결**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web` +
+완료: **GitHub Actions IaC 연동(방향 B) 최소**(`examples/github-action/action.yml` — 재사용 composite:
+`setup-terraform`→`init`/`plan -out=tfplan`/`show -json tfplan > plan.json`→`jq`로 `{plan,stackName}` 본문→
+`POST /v1/scans/iac`(Bearer)→202 `{jobId}`→`GET /v1/jobs/:id` `succeeded`/`failed`까지 폴링. inputs/outputs +
+`example-workflow.yml`·`README.md`. 고객 CI에서 plan만 떠 클라우드 credentials 미유출, 백엔드 코어 0줄·의존성 0,
+GitHub App 불필요. 대시보드 `/scan` IaC 섹션 `GithubActionGuide`(워크플로 YAML 복사, `CopyableCode` 공용 컴포넌트)),
+**connector-web MVP + API/웹 연결**(EASM/웹공급망, `packages/connector-web` + CLI `scan:web` +
 `POST /v1/scans/web`(`JOB_TYPES`에 `web`, `runWebScan`, 워커 `scanWeb` 주입) + 대시보드 `/scan` 웹 섹션·랜딩 히어로
 URL 입력창. web_asset 리터럴, TLS·보안헤더·노출JS(→OSV 재사용)·SRI),
 **connector-web Phase 2 능동 점검**(`activeScanUrl` — 소유권(DNS TXT) 게이트 후 서브도메인 열거·시크릿 스캔·CNAME 탈취 후보.
