@@ -41,6 +41,7 @@ export default function RootLayout({
             <Link href="/assets">자산</Link>
             <Link href="/findings">발견</Link>
             <Link href="/impact">영향도</Link>
+            <Link href="/report">리포트</Link>
             <Link href="/scan">스캔</Link>
           </nav>
         </header>
