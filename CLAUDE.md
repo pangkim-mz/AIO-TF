@@ -13,7 +13,7 @@ AI 기반 인프라/공급망 리스크 통합 관제 SaaS. 전역 `~/.claude/CL
 
 ```bash
 pnpm install
-pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 182 passed / 4 skipped(Postgres 계약 4건)
+pnpm test          # vitest, 네트워크 불필요(OSV 모킹). 현재 187 passed / 4 skipped(Postgres 계약 4건)
 pnpm typecheck     # tsc --noEmit
 
 # CLI 스캔
@@ -53,6 +53,8 @@ pnpm web:dev       # env: API_BASE_URL(기본 localhost:3000), API_TOKEN(기본 
   CVSS 점수는 `src/cvss.ts`(순수 함수)가 v3.0/v3.1 벡터를 Base Score(0–10)로 계산해 `Finding.cvss`를 채우고,
   점수가 있으면 정성 등급 구간으로 severity 정밀화(없으면 GHSA 텍스트 라벨 폴백). v2/v4 미지원→폴백.
 - `apps/{cli,api,web}` — 오케스트레이션/노출 계층. 비즈니스 로직 두지 말 것.
+  대시보드 `/report`는 현재 점검 결과를 마크다운 리포트로 다운로드한다(`apps/web/lib/report.ts` 순수 조립
+  + `app/report/download-button.tsx` Blob 다운로드). 브라우저 보안상 임의 폴더 저장 불가 → 다운로드는 브라우저 기본 폴더.
 
 스캔 비동기화: API는 `POST /v1/scans/*`에서 검증 후 작업을 큐에 넣고(202+jobId), 인프로세스
 워커(`apps/api/src/worker.ts`)가 클레임해 처리한다. 스캔 실행 로직은 `apps/api/src/scans.ts`
@@ -159,7 +161,9 @@ CI 파이프라인(`.github/workflows/ci.yml`, GitHub 연결·가동·통과. No
 **스캔 비동기화**(`JobQueue` 포트 + `ScanWorker`, `003_job.sql`, `POST→202+jobId`/`GET /v1/jobs/:id`),
 **큐 재시도/회수**(지수 백오프 재시도 + 리스 기반 stuck 회수, `Job.availableAt`·`retry`·`claimNext({leaseMs})`, `004_job_retry.sql`),
 **토큰 발급/폐기 API**(admin 전용 `POST`/`GET`/`DELETE /v1/tokens`, `TokenStore.listByTenant` 추가,
-발급자 테넌트 범위, 원문 1회 노출·해시만 저장).
+발급자 테넌트 범위, 원문 1회 노출·해시만 저장),
+**대시보드 보안 점검 리포트 다운로드**(`/report` + nav "리포트" — 현재 점검 결과를 마크다운으로 내려받기,
+`apps/web/lib/report.ts` 순수 조립 + Blob `.md` 다운로드, 새 API 0·코어 0줄·의존성 0).
 
 ### 알려진 한계
 
